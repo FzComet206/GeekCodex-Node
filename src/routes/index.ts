@@ -7,6 +7,7 @@ import authRouter from './auth';
 router.use('/auth', authRouter);
 router.get('/', (req, res) => {
     res.json({
+        id: 1,
         img: "url",
         creator : "leo",
         ingredients: ["flour", "sugar", "butter"],
