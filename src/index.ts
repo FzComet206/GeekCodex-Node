@@ -4,7 +4,6 @@ config();
 import express, { Express } from "express";
 import routes from './routes';
 
-const app = express();
 const PORT = process.env.PORT || 3001;
 
 function creatApp() : Express {
@@ -22,6 +21,5 @@ async function main(){
         console.log(err);
     }
 }
-
 
 main();
