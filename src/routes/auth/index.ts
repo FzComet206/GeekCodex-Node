@@ -1,13 +1,23 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
-
 import { Router } from "express";
+import argon2, { hash } from "argon2";
 
 const router = Router();
 
-router.get('/', (req, res) => {
-    res.json({
-        text: "hi this is auth router sb leo"
+const hashPassword = async (password: string) => {
+    const hashed = await argon2.hash(password, {
+        type: argon2.argon2id
     });
+    return hashed;
+}
+
+router.post('/register', async (req, res) => {
+    res.json({
+        text: "server register action"
+    });
+    console.log(req.body);
+    const p = await hashPassword(req.body.password);
+    console.log(p);
 })
 
 
