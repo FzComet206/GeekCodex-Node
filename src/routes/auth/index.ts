@@ -1,6 +1,12 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 import { Router } from "express";
 import argon2, { hash } from "argon2";
+import { Session } from "express-session";
+
+interface CustomSession extends Session {
+    userId? : number;
+    name? : string;
+}
 
 const router = Router();
 
@@ -15,9 +21,13 @@ router.post('/register', async (req, res) => {
     res.json({
         text: "server register action"
     });
-    console.log(req.body);
     const p = await hashPassword(req.body.password);
-    console.log(p);
+    console.log(req.body);
+    console.log(req.session.cookie);
+    
+    (req.session as CustomSession).userId = 20;
+    (req.session as CustomSession).name = "Antares";
+    // set up register session
 })
 
 

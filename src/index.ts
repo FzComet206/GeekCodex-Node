@@ -1,26 +1,25 @@
 import { config } from 'dotenv';
+import { creatApp } from './middlewares/createApp';
 config();
 
-import express, { Express } from 'express';
-import routes from './routes';
-import cors from 'cors';
-import bodyParser from 'body-parser';
+// drizzle configuration
+import { drizzle } from 'drizzle-orm/node-postgres'
+import client from './config/drizzle';
 
-const corsOptions = {
-    origin: process.env.ORIGIN
-}
-
-const PORT = process.env.PORT || 3002
-
-function creatApp() : Express {
-    const app = express();
-    app.use(bodyParser.json());
-    app.use(cors(corsOptions))
-    app.use('/api', routes);
-    return app;
-}
+const PORT = process.env.PORT;
 
 async function main(){
+
+    try {
+        await client.connect();
+        const db = await drizzle(client);
+        console.log("db connected successfully");
+
+    } catch (err) {
+        console.log(err);
+        console.log('connect to database failed');
+    }
+
     try {
         const app = creatApp();
         app.listen(PORT, () => console.log(`running on port ${PORT}`));
