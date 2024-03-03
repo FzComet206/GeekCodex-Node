@@ -8,6 +8,7 @@ config();
 import session from 'express-session';
 import RedisStore from 'connect-redis';
 import { createClient } from 'redis';
+import { except } from 'drizzle-orm/mysql-core';
 
 const corsOptions = {
     origin: process.env.ORIGIN
@@ -19,11 +20,11 @@ export function creatApp() : Express {
 
     // connect to redis server
     const redisClient = createClient();
+
     redisClient.connect().catch(err => {
-        console.log("redis connect error")
-        console.log(err)
-    });
-    console.log("redis connected successfully")
+            console.log("redis connect error")
+            console.log(err)});
+
     let store = new (RedisStore as any)({ client: redisClient, prefix: "rsapp"});
 
     // use express session middleware and store session in redis

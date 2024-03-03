@@ -12,7 +12,7 @@ async function main(){
 
     try {
         await client.connect();
-        const db = await drizzle(client);
+        // const db = await drizzle(client);
         console.log("db connected successfully");
 
     } catch (err) {
@@ -27,6 +27,7 @@ async function main(){
     } catch(err) {
         console.log(err);
     }
+
 }
 
 main();
