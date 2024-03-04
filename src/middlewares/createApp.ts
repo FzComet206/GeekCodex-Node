@@ -31,10 +31,11 @@ export function creatApp() : Express {
     app.use(
         session({
             store: store,
-            secret: process.env.SESSIONSECRET || "",
+            secret: process.env.SESSIONSECRET || "secret",
             resave: false,
-            saveUninitialized: true,
+            saveUninitialized: false,
             cookie: {
+                sameSite: 'strict',
                 secure: false,
                 httpOnly: true,
                 maxAge: 1000 * 60 * 60 * 24,
