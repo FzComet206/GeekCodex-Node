@@ -32,7 +32,6 @@ router.get('/me', ensureAuthenticated, async (req, res) => {
     // add logic
     console.log(req.session.userId);
     res.status(200).json({
-        userId: 1,
         username: "antares",
         token: "token"
     })
@@ -45,7 +44,13 @@ router.post('/logout', async (req, res) => {
                 message: "Internal server error"
             });
         } else {
-            res.clearCookie("Codex")
+            res.clearCookie("Codex", {
+                domain: "localhost",
+                path: "/",
+                sameSite: 'strict',
+                httpOnly: true,
+                secure: false
+            })
             res.send("Logged out")
         }
     })
