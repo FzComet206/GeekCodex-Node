@@ -1,39 +1,50 @@
-import express, { Express, } from 'express';
+import express from 'express';
 import routes from '../routes';
-import bodyParser from 'body-parser';
 import cors from 'cors';
 import { config } from 'dotenv';
 config();
 
 import session from 'express-session';
-import RedisStore from 'connect-redis';
-import { createClient } from 'redis';
-import { except } from 'drizzle-orm/mysql-core';
+import connectRedis from 'connect-redis';
+import Redis from 'ioredis';
 
 const corsOptions = {
-    origin: process.env.ORIGIN
+    origin: process.env.ORIGIN,
+    credentials: true
 }
 
-export function creatApp() : Express {
+declare module "express-session" {
+    interface SessionData {
+        userId?: number;
+    }
+}
+
+export function creatApp(){
     const app = express();
-    app.use(bodyParser.json());
+    // app.use(bodyParser.json());
 
     // connect to redis server
-    const redisClient = createClient();
+    // const redisClient = createClient();
 
-    redisClient.connect().catch(err => {
-            console.log("redis connect error")
-            console.log(err)});
+    const RedisStore = connectRedis(session);
+    const redis = new Redis();
 
-    let store = new (RedisStore as any)({ client: redisClient, prefix: "rsapp"});
+    // const redisStore = new RedisStore({ client: redis});
 
+    // redisClient.connect().catch(err => {
+            // console.log("redis connect error")
+            // console.log(err)});
+    // use cors middleware
+
+    app.use(cors(corsOptions))
     // use express session middleware and store session in redis
     app.use(
         session({
-            store: store,
+            name: "Codex",
+            store: new RedisStore({ client: redis, disableTouch: true}),
             secret: process.env.SESSIONSECRET || "secret",
-            resave: false,
             saveUninitialized: false,
+            resave: false,
             cookie: {
                 sameSite: 'strict',
                 secure: false,
@@ -42,9 +53,8 @@ export function creatApp() : Express {
             }})
         );
 
-    // use cors middleware
-    app.use(cors(corsOptions))
     // use routes
     app.use('/api', routes);
+    
     return app;
 }

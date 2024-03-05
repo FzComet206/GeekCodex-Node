@@ -22,15 +22,76 @@ const hashPassword = (password) => __awaiter(void 0, void 0, void 0, function* (
     });
     return hashed;
 });
-router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.json({
-        text: "server register action"
+function ensureAuthenticated(req, res, next) {
+    console.log(req.session.userId);
+    if (req.session.userId) {
+        next(); // Proceed if authenticated
+    }
+    else {
+        res.status(401).send('Unauthorized');
+    }
+}
+router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // add logic
+    console.log(req.session.userId);
+    res.status(200).json({
+        userId: 1,
+        username: "antares",
+        token: "token"
     });
-    const p = yield hashPassword(req.body.password);
-    console.log(req.body);
-    console.log(req.session.cookie);
+}));
+router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+        else {
+            res.clearCookie("Codex");
+            res.send("Logged out");
+        }
+    });
+    //res.clearCookie("Codex", {
+    //sameSite: 'strict',
+    //secure: false,
+    //httpOnly: true,
+    //maxAge: 1000 * 60 * 60 * 24,
+    //})
+}));
+router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const session = req.session;
+    // set auth logic here
+    session.userId = 1;
+    res.status(200).json({
+        userId: 1,
+        userName: "antares",
+        token: "token"
+    });
+}));
+router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // set register logic here
     req.session.userId = 20;
-    req.session.name = "Antares";
-    // set up register session
+    res.status(200).json({
+        username: "Antares",
+        token: "token"
+    });
+    //const user = await db.select().from(users).where(eq(users.email, req.body.email)).execute();
+    //if (user.length > 0) {
+    //res.status(404).json({
+    //message: "user already exists"
+    //})
+    //} else {
+    //await db.insert(users).values({
+    //username: req.body.name,
+    //email: req.body.email,
+    //password: await hashPassword(req.body.password),
+    //}).execute();
+    //res.json({
+    //text: "server register action"
+    //});
+    //(req.session as CustomSession).userId = user[0].id;
+    //(req.session as CustomSession).name = user[0].username || "undefined user";
+    //}
 }));
 exports.default = router;

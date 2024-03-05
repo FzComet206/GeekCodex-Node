@@ -15,15 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = require("dotenv");
 const createApp_1 = require("./middlewares/createApp");
 (0, dotenv_1.config)();
-// drizzle configuration
-const node_postgres_1 = require("drizzle-orm/node-postgres");
 const drizzle_1 = __importDefault(require("./config/drizzle"));
 const PORT = process.env.PORT;
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             yield drizzle_1.default.connect();
-            const db = yield (0, node_postgres_1.drizzle)(drizzle_1.default);
+            // const db = await drizzle(client);
             console.log("db connected successfully");
         }
         catch (err) {

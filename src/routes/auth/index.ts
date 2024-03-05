@@ -8,11 +8,6 @@ import { users, Users} from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 
-interface CustomSession extends Session {
-    userId? : number;
-    isAuth : boolean;
-}
-
 const router = Router();
 
 const hashPassword = async (password: string) => {
@@ -22,24 +17,20 @@ const hashPassword = async (password: string) => {
     return hashed;
 }
 
-
 function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
-    const session = req.session as CustomSession;
-    console.log(session.userId)
-    if (session.isAuth) {
+
+    console.log(req.session.userId);
+    if (req.session.userId) {
         next(); // Proceed if authenticated
     } else {
         res.status(401).send('Unauthorized');
     }
 }
 
-router.post('/test', ensureAuthenticated, async (req, res) => {
-    res.status(200).json({
-        message: "this is ur data"
-    })
-})
+router.get('/me', ensureAuthenticated, async (req, res) => {
 
-router.post('/me', ensureAuthenticated, async (req, res) => {
+    // add logic
+    console.log(req.session.userId);
     res.status(200).json({
         userId: 1,
         username: "antares",
@@ -47,28 +38,35 @@ router.post('/me', ensureAuthenticated, async (req, res) => {
     })
 })
 
-router.post('/logout', ensureAuthenticated, async (req, res) => {
-    const session = req.session as CustomSession;
-    session.destroy((err) => {
+router.post('/logout', async (req, res) => {
+    req.session.destroy((err) => {
         if (err) {
             res.status(500).json({
                 message: "Internal server error"
-            })
+            });
         } else {
-            res.status(200).json({
-                message: "Logged out"
-            })
+            res.clearCookie("Codex")
+            res.send("Logged out")
         }
     })
+
+
+    // session is destroyed but cookie and redis store is not cleared
+
+    //res.clearCookie("Codex", {
+                //sameSite: 'strict',
+                //secure: false,
+                //httpOnly: true,
+                //maxAge: 1000 * 60 * 60 * 24,
+//})
 })
 
 router.post('/login', async (req, res) => {
-    const session = req.session as CustomSession;
+    const session = req.session;
 
     // set auth logic here
 
     session.userId = 1;
-    session.isAuth = true;
 
     res.status(200).json({
         userId: 1,
@@ -79,18 +77,15 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
 
-    const session = req.session as CustomSession;
-
     // set register logic here
 
-    session.userId = 1;
-    session.isAuth = true;
+    req.session.userId = 20;
 
     res.status(200).json({
-        userId: 1,
         username: "Antares",
         token: "token"
     })
+
 
      //const user = await db.select().from(users).where(eq(users.email, req.body.email)).execute();
      //if (user.length > 0) {
