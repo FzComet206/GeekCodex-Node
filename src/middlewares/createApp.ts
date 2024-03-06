@@ -38,6 +38,9 @@ export function creatApp(){
 
     app.use(cors(corsOptions))
     // use express session middleware and store session in redis
+
+    app.use(express.json())
+
     app.use(
         session({
             name: "Codex",

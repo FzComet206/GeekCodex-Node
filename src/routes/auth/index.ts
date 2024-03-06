@@ -1,11 +1,11 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 import { Router } from "express";
 import argon2, { hash } from "argon2";
-import client from "../../config/drizzle";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { users, Users} from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
+import { db } from "../../index";
+import { except } from "drizzle-orm/mysql-core";
 
 const router = Router();
 
@@ -18,8 +18,8 @@ const hashPassword = async (password: string) => {
 
 function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
 
-    console.log(req.session.userId);
     if (req.session.userId) {
+        console.log(req.session.userId + " is authenticated");
         next(); // Proceed if authenticated
     } else {
         res.status(401).send('Unauthorized');
@@ -28,12 +28,17 @@ function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
 
 router.get('/me', ensureAuthenticated, async (req, res) => {
 
-    // add logic
-    console.log(req.session.userId);
+    const user = await db.select().from(users).where(eq(users.id, req.session.userId!)).execute();
+    if (user.length == 0) {
+        res.status(404).json({
+            message: "user not found"
+        })
+        return;
+    }
     res.status(200).json({
-        username: "antares",
-        token: "token"
+        username: user[0].username,
     })
+
 })
 
 router.post('/logout', async (req, res) => {
@@ -53,62 +58,76 @@ router.post('/logout', async (req, res) => {
             res.send("Logged out")
         }
     })
-
-
-    // session is destroyed but cookie and redis store is not cleared
-
-    //res.clearCookie("Codex", {
-                //sameSite: 'strict',
-                //secure: false,
-                //httpOnly: true,
-                //maxAge: 1000 * 60 * 60 * 24,
-//})
 })
 
 router.post('/login', async (req, res) => {
-    const session = req.session;
 
-    // set auth logic here
+    const email = req.body.email;
+    const user = await db.select().from(users).where(eq(users.email, email)).execute();
+    if (user.length == 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
 
-    session.userId = 1;
-
-    res.status(200).json({
-        userId: 1,
-        userName: "antares",
-        token: "token"
-    })
+    // passsword check
+    try {
+        if (await argon2.verify(user[0].password!, req.body.password)) {
+            req.session.userId = user[0].id;
+            res.status(200).json({
+                userName: user[0].username
+            })
+        } else {
+            res.status(401).json({
+                message: "Invalid password"
+            })
+        }
+    } catch {
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
 })
 
 router.post('/register', async (req, res) => {
 
-    // set register logic here
+    const name = req.body.name;
+    const email = req.body.email;
+    const password = req.body.password;
+    const serverCheck = (
+        (name.length < 3 || name.length > 12) ||
+        (email.length < 4 || email.length > 50 || email.indexOf('@') === -1 || email.indexOf('.') === -1)  ||
+        (password.length < 8 || password.length > 20)
+    );
+    if (serverCheck) {
+        res.status(400).json({
+            message: "Invalid input"
+        })
+        return;
+    }
 
-    req.session.userId = 20;
+    // check if user already exists through email
+    const existing = await db.select().from(users).where(eq(users.email, email)).execute();
+    if (existing.length > 0) {
+        res.status(400).json({
+            message: "User already exists"
+        })
+        return;
+    }
+    
+    // register user
+    const hashed = hashPassword(req.body.password);
+    db.insert(users).values({
+        username: req.body.name,
+        email: req.body.email,
+        password: await hashed,
+    }).execute();
 
+    // login user by setting userid
+    const user = await db.select().from(users).where(eq(users.email, email)).execute();
+    req.session.userId = user[0].id;
     res.status(200).json({
-        username: "Antares",
-        token: "token"
+        username: name,
     })
-
-
-     //const user = await db.select().from(users).where(eq(users.email, req.body.email)).execute();
-     //if (user.length > 0) {
-         //res.status(404).json({
-             //message: "user already exists"
-         //})
-     //} else {
-         //await db.insert(users).values({
-             //username: req.body.name,
-             //email: req.body.email,
-             //password: await hashPassword(req.body.password),
-         //}).execute();
-
-         //res.json({
-             //text: "server register action"
-         //});
-         //(req.session as CustomSession).userId = user[0].id;
-         //(req.session as CustomSession).name = user[0].username || "undefined user";
-     //}
 })
 
 export default router;

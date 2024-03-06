@@ -6,19 +6,13 @@ config();
 import { drizzle } from 'drizzle-orm/node-postgres'
 import client from './config/drizzle';
 
+client.connect();
+export const db = drizzle(client);
+console.log("db connected successfully");
+
 const PORT = process.env.PORT;
 
 async function main(){
-
-    try {
-        await client.connect();
-        const db = await drizzle(client);
-        console.log("db connected successfully");
-
-    } catch (err) {
-        console.log(err);
-        console.log('connect to database failed');
-    }
 
     try {
         const app = creatApp();
