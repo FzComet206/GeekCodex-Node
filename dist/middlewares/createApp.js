@@ -11,7 +11,7 @@ const dotenv_1 = require("dotenv");
 (0, dotenv_1.config)();
 const express_session_1 = __importDefault(require("express-session"));
 const connect_redis_1 = __importDefault(require("connect-redis"));
-const redis_1 = require("redis");
+const ioredis_1 = __importDefault(require("ioredis"));
 const corsOptions = {
     origin: process.env.ORIGIN,
     credentials: true
@@ -21,9 +21,9 @@ function creatApp() {
     // app.use(bodyParser.json());
     // connect to redis server
     // const redisClient = createClient();
-    const redisClient = (0, redis_1.createClient)();
-    redisClient.connect().catch(console.error);
-    const redisStore = new connect_redis_1.default({ client: redisClient });
+    const RedisStore = (0, connect_redis_1.default)(express_session_1.default);
+    const redis = new ioredis_1.default();
+    // const redisStore = new RedisStore({ client: redis});
     // redisClient.connect().catch(err => {
     // console.log("redis connect error")
     // console.log(err)});
@@ -32,7 +32,7 @@ function creatApp() {
     // use express session middleware and store session in redis
     app.use((0, express_session_1.default)({
         name: "Codex",
-        store: redisStore,
+        store: new RedisStore({ client: redis, disableTouch: true }),
         secret: process.env.SESSIONSECRET || "secret",
         saveUninitialized: false,
         resave: false,

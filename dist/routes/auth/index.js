@@ -35,7 +35,6 @@ router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, v
     // add logic
     console.log(req.session.userId);
     res.status(200).json({
-        userId: 1,
         username: "antares",
         token: "token"
     });
@@ -48,10 +47,17 @@ router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
         }
         else {
-            res.clearCookie("Codex");
+            res.clearCookie("Codex", {
+                domain: "localhost",
+                path: "/",
+                sameSite: 'strict',
+                httpOnly: true,
+                secure: false
+            });
             res.send("Logged out");
         }
     });
+    // session is destroyed but cookie and redis store is not cleared
     //res.clearCookie("Codex", {
     //sameSite: 'strict',
     //secure: false,

@@ -1,7 +1,6 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 import { Router } from "express";
 import argon2, { hash } from "argon2";
-import { Session } from "express-session";
 import client from "../../config/drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { users, Users} from "../../models/schema";

@@ -108,5 +108,5 @@
     "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
     "typeRoots": ["node_modules/@types", "src/utils"],    /* Specify multiple folders that act like './node_modules/@types'. */
   },
-  "include": ["src/**/*.ts", "src/utils/*.d.ts"]
+  "include": ["src/**/*.ts", "src/utils/*.d.ts", "src/migrate.js"]
 }
