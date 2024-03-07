@@ -1,5 +1,5 @@
 {
-  "id": "34d2a458-4456-42a6-a47b-4cd43d6a4d8b",
+  "id": "cf13487f-7017-423d-9c5a-73631a94bef9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
@@ -34,7 +34,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "time",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -96,7 +96,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "time",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -134,6 +134,34 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
+    "post_images": {
+      "name": "post_images",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "alt": {
+          "name": "alt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image": {
+          "name": "image",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "posts": {
       "name": "posts",
       "schema": "",
@@ -150,9 +178,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "image": {
-          "name": "image",
-          "type": "bytea",
+        "imageid": {
+          "name": "imageid",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -189,7 +217,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "time",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -203,6 +231,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "userid"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "posts_imageid_post_images_id_fk": {
+          "name": "posts_imageid_post_images_id_fk",
+          "tableFrom": "posts",
+          "tableTo": "post_images",
+          "columnsFrom": [
+            "imageid"
           ],
           "columnsTo": [
             "id"
@@ -299,7 +340,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "time",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -308,7 +349,8 @@
           "name": "follower_count",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {},

@@ -5,7 +5,6 @@ import { users, Users} from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 import { db } from "../../index";
-import { except } from "drizzle-orm/mysql-core";
 
 const router = Router();
 

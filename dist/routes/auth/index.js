@@ -15,6 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 const express_1 = require("express");
 const argon2_1 = __importDefault(require("argon2"));
+const schema_1 = require("../../models/schema");
+const drizzle_orm_1 = require("drizzle-orm");
+const index_1 = require("../../index");
 const router = (0, express_1.Router)();
 const hashPassword = (password) => __awaiter(void 0, void 0, void 0, function* () {
     const hashed = yield argon2_1.default.hash(password, {
@@ -23,8 +26,8 @@ const hashPassword = (password) => __awaiter(void 0, void 0, void 0, function* (
     return hashed;
 });
 function ensureAuthenticated(req, res, next) {
-    console.log(req.session.userId);
     if (req.session.userId) {
+        console.log(req.session.userId + " is authenticated");
         next(); // Proceed if authenticated
     }
     else {
@@ -32,11 +35,15 @@ function ensureAuthenticated(req, res, next) {
     }
 }
 router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // add logic
-    console.log(req.session.userId);
+    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.id, req.session.userId)).execute();
+    if (user.length == 0) {
+        res.status(404).json({
+            message: "user not found"
+        });
+        return;
+    }
     res.status(200).json({
-        username: "antares",
-        token: "token"
+        username: user[0].username,
     });
 }));
 router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -57,47 +64,67 @@ router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.send("Logged out");
         }
     });
-    // session is destroyed but cookie and redis store is not cleared
-    //res.clearCookie("Codex", {
-    //sameSite: 'strict',
-    //secure: false,
-    //httpOnly: true,
-    //maxAge: 1000 * 60 * 60 * 24,
-    //})
 }));
 router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const session = req.session;
-    // set auth logic here
-    session.userId = 1;
-    res.status(200).json({
-        userId: 1,
-        userName: "antares",
-        token: "token"
-    });
+    const email = req.body.email;
+    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+    if (user.length == 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+    // passsword check
+    try {
+        if (yield argon2_1.default.verify(user[0].password, req.body.password)) {
+            req.session.userId = user[0].id;
+            res.status(200).json({
+                userName: user[0].username
+            });
+        }
+        else {
+            res.status(401).json({
+                message: "Invalid password"
+            });
+        }
+    }
+    catch (_a) {
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
 }));
 router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // set register logic here
-    req.session.userId = 20;
+    const name = req.body.name;
+    const email = req.body.email;
+    const password = req.body.password;
+    const serverCheck = ((name.length < 3 || name.length > 12) ||
+        (email.length < 4 || email.length > 50 || email.indexOf('@') === -1 || email.indexOf('.') === -1) ||
+        (password.length < 8 || password.length > 20));
+    if (serverCheck) {
+        res.status(400).json({
+            message: "Invalid input"
+        });
+        return;
+    }
+    // check if user already exists through email
+    const existing = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+    if (existing.length > 0) {
+        res.status(400).json({
+            message: "User already exists"
+        });
+        return;
+    }
+    // register user
+    const hashed = hashPassword(req.body.password);
+    index_1.db.insert(schema_1.users).values({
+        username: req.body.name,
+        email: req.body.email,
+        password: yield hashed,
+    }).execute();
+    // login user by setting userid
+    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+    req.session.userId = user[0].id;
     res.status(200).json({
-        username: "Antares",
-        token: "token"
+        username: name,
     });
-    //const user = await db.select().from(users).where(eq(users.email, req.body.email)).execute();
-    //if (user.length > 0) {
-    //res.status(404).json({
-    //message: "user already exists"
-    //})
-    //} else {
-    //await db.insert(users).values({
-    //username: req.body.name,
-    //email: req.body.email,
-    //password: await hashPassword(req.body.password),
-    //}).execute();
-    //res.json({
-    //text: "server register action"
-    //});
-    //(req.session as CustomSession).userId = user[0].id;
-    //(req.session as CustomSession).name = user[0].username || "undefined user";
-    //}
 }));
 exports.default = router;

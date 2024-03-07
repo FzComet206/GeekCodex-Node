@@ -30,6 +30,7 @@ function creatApp() {
     // use cors middleware
     app.use((0, cors_1.default)(corsOptions));
     // use express session middleware and store session in redis
+    app.use(express_1.default.json());
     app.use((0, express_session_1.default)({
         name: "Codex",
         store: new RedisStore({ client: redis, disableTouch: true }),
