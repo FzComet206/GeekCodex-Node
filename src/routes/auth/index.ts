@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
         if (await argon2.verify(user[0].password!, req.body.password)) {
             req.session.userId = user[0].id;
             res.status(200).json({
-                userName: user[0].username
+                username: user[0].username
             })
         } else {
             res.status(401).json({
