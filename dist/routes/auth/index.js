@@ -46,6 +46,34 @@ router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, v
         username: user[0].username,
     });
 }));
+router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const email = req.body.email;
+    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+    console.log(req.body);
+    if (user.length == 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+    // passsword check
+    try {
+        if (yield argon2_1.default.verify(user[0].password, req.body.password)) {
+            req.session.userId = user[0].id;
+            res.status(200).json({
+                username: user[0].username
+            });
+        }
+        else {
+            res.status(401).json({
+                message: "Invalid password"
+            });
+        }
+    }
+    catch (_a) {
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}));
 router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     req.session.destroy((err) => {
         if (err) {
@@ -65,33 +93,6 @@ router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
     });
 }));
-router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const email = req.body.email;
-    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
-    if (user.length == 0) {
-        res.status(404).json({ message: "User not found" });
-        return;
-    }
-    // passsword check
-    try {
-        if (yield argon2_1.default.verify(user[0].password, req.body.password)) {
-            req.session.userId = user[0].id;
-            res.status(200).json({
-                userName: user[0].username
-            });
-        }
-        else {
-            res.status(401).json({
-                message: "Invalid password"
-            });
-        }
-    }
-    catch (_a) {
-        res.status(500).json({
-            message: "Internal server error"
-        });
-    }
-}));
 router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const name = req.body.name;
     const email = req.body.email;
@@ -108,7 +109,7 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
     // check if user already exists through email
     const existing = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
     if (existing.length > 0) {
-        res.status(400).json({
+        res.status(401).json({
             message: "User already exists"
         });
         return;
