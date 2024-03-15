@@ -13,20 +13,13 @@ CREATE TABLE IF NOT EXISTS "likes" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "post_images" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"alt" text NOT NULL,
-	"image" "bytea" NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "posts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"userid" integer NOT NULL,
-	"imageid" integer,
 	"title" text NOT NULL,
 	"body" text NOT NULL,
 	"link" text,
-	"link_description" text,
+	"image" text,
 	"number_of_likes" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -73,12 +66,6 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "posts" ADD CONSTRAINT "posts_userid_users_id_fk" FOREIGN KEY ("userid") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "posts" ADD CONSTRAINT "posts_imageid_post_images_id_fk" FOREIGN KEY ("imageid") REFERENCES "post_images"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

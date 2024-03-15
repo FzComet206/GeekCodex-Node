@@ -1,10 +1,11 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 import { Router } from "express";
-import argon2, { hash } from "argon2";
-import { users, Users} from "../../models/schema";
+import argon2 from "argon2";
+import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 import { db } from "../../index";
+
 
 const router = Router();
 
@@ -40,29 +41,11 @@ router.get('/me', ensureAuthenticated, async (req, res) => {
 
 })
 
-router.post('/logout', async (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            res.status(500).json({
-                message: "Internal server error"
-            });
-        } else {
-            res.clearCookie("Codex", {
-                domain: "localhost",
-                path: "/",
-                sameSite: 'strict',
-                httpOnly: true,
-                secure: false
-            })
-            res.send("Logged out")
-        }
-    })
-})
-
 router.post('/login', async (req, res) => {
 
     const email = req.body.email;
     const user = await db.select().from(users).where(eq(users.email, email)).execute();
+    console.log(req.body)
     if (user.length == 0) {
         res.status(404).json({ message: "User not found" });
         return;
@@ -87,6 +70,26 @@ router.post('/login', async (req, res) => {
     }
 })
 
+router.post('/logout', async (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        } else {
+            res.clearCookie("Codex", {
+                domain: "localhost",
+                path: "/",
+                sameSite: 'strict',
+                httpOnly: true,
+                secure: false
+            })
+            res.send("Logged out")
+        }
+    })
+})
+
+
 router.post('/register', async (req, res) => {
 
     const name = req.body.name;
@@ -97,6 +100,8 @@ router.post('/register', async (req, res) => {
         (email.length < 4 || email.length > 50 || email.indexOf('@') === -1 || email.indexOf('.') === -1)  ||
         (password.length < 8 || password.length > 20)
     );
+
+
     if (serverCheck) {
         res.status(400).json({
             message: "Invalid input"
@@ -107,7 +112,7 @@ router.post('/register', async (req, res) => {
     // check if user already exists through email
     const existing = await db.select().from(users).where(eq(users.email, email)).execute();
     if (existing.length > 0) {
-        res.status(400).json({
+        res.status(401).json({
             message: "User already exists"
         })
         return;
