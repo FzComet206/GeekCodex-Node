@@ -18,7 +18,21 @@ const router = (0, express_1.Router)();
 const auth_1 = __importDefault(require("./auth"));
 const schema_1 = require("../models/schema");
 const index_1 = require("../index");
+const drizzle_1 = __importDefault(require("../config/drizzle"));
 // promisify file system functions
+const fetchPosts = (limit, offset, seed) => __awaiter(void 0, void 0, void 0, function* () {
+    yield drizzle_1.default.query('SELECT setseed($1)', [seed]);
+    const query = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        ORDER BY RANDOM()
+        LIMIT $1 OFFSET $2;
+    `;
+    // console.log(limit)
+    // console.log(offset)
+    return yield drizzle_1.default.query(query, [limit, offset]);
+});
 function ensureAuthenticated(req, res, next) {
     console.log(req.session.userId);
     if (req.session.userId) {
@@ -29,9 +43,41 @@ function ensureAuthenticated(req, res, next) {
         res.status(401).send('Unauthorized');
     }
 }
+router.get('/feed', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const limit = parseInt(req.query.limit) || 4;
+    const page = parseInt(req.query.page) || 1;
+    const seed = parseFloat(req.query.seed) || 0.5;
+    const offset = (page - 1) * limit;
+    try {
+        const results = yield fetchPosts(limit, offset, seed);
+        let posts = new Array();
+        results.rows.forEach(element => {
+            const p = {
+                id: element.id,
+                title: element.title,
+                body: element.body,
+                link: element.link,
+                image: element.image,
+                created_at: element.created_at,
+                likes: element.number_of_likes,
+                author: element.author
+            };
+            posts.push(p);
+        });
+        // console.log(posts)
+        res.status(200).json(posts);
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}));
 router.post('/post', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // todo: on post, index vocabularies
     const { title, summary, link, image } = req.body;
-    const serverCheck = ((title.length < 1 || title.length > 30) ||
+    const serverCheck = ((title.length < 1 || title.length > 80) ||
         (summary.length < 1 || summary.length > 5000) ||
         (link.length > 200));
     if (serverCheck) {

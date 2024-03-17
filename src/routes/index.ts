@@ -88,7 +88,7 @@ router.post('/post', ensureAuthenticated, async (req, res) => {
     const { title, summary, link, image } = req.body;
     
     const serverCheck = (
-        (title.length < 1 || title.length > 30) ||
+        (title.length < 1 || title.length > 80) ||
         (summary.length < 1 || summary.length > 5000) ||
         (link.length > 200)
     );
