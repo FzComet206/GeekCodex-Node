@@ -71,7 +71,10 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
         });
 
         // console.log(posts)
-        res.status(200).json(posts)
+        setTimeout(() => {
+            res.status(200).json(posts)
+        }, 200);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({
