@@ -35,6 +35,20 @@ const fetchPosts = async (limit: number, offset: number, seed: number) => {
     return await client.query(query, [limit, offset]);
 }
 
+const fetchPostsSelf = async (limit: number, offset: number, userid: number) => {
+
+    const query = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        WHERE posts.userid = $3
+        LIMIT $1 OFFSET $2;
+    `;
+    // console.log(limit)
+    // console.log(offset)
+    return await client.query(query, [limit, offset, userid!]);
+}
+
 function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
 
     console.log(req.session.userId)
@@ -45,6 +59,44 @@ function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
         res.status(401).send('Unauthorized');
     }
 }
+
+router.get('/self', ensureAuthenticated, async (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 4;
+    const page = parseInt(req.query.page as string) || 1;
+    const offset = (page - 1) * limit;
+
+    const userid = req.session.userId;
+    try {
+        const results = await fetchPostsSelf(limit, offset, userid!)
+
+        let posts: PostData[] = new Array();
+        results.rows.forEach(element => {
+            const p: PostData = {
+                id : element.id,
+                title : element.title,
+                body : element.body,
+                link : element.link,
+                image : element.image,
+                created_at : element.created_at,
+                likes : element.number_of_likes,
+                author: element.author
+            }
+            posts.push(p);
+        });
+
+        // console.log(posts)
+        setTimeout(() => {
+            res.status(200).json(posts)
+        }, 200);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
+
+})
 
 router.get('/feed', ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
