@@ -21,13 +21,13 @@ export interface PostData {
 // promisify file system functions
 const fetchPosts = async (limit: number, offset: number, seed: number) => {
 
-    await client.query('SELECT setseed($1)', [seed]);
+    // await client.query('SELECT setseed($1)', [seed]);
 
     const query = `
         SELECT posts.* , users.username AS author 
         FROM posts
         JOIN users ON posts.userid = users.id
-        ORDER BY RANDOM()
+        ORDER BY posts.created_at DESC
         LIMIT $1 OFFSET $2;
     `;
     // console.log(limit)
@@ -42,6 +42,7 @@ const fetchPostsSelf = async (limit: number, offset: number, userid: number) => 
         FROM posts
         JOIN users ON posts.userid = users.id
         WHERE posts.userid = $3
+        ORDER BY posts.created_at DESC
         LIMIT $1 OFFSET $2;
     `;
     // console.log(limit)
@@ -49,9 +50,19 @@ const fetchPostsSelf = async (limit: number, offset: number, userid: number) => 
     return await client.query(query, [limit, offset, userid!]);
 }
 
+const verifyPostUser = async (userid: number, postid: number) => {
+    console.log(userid)
+    console.log(postid)
+
+    const query = `
+        SELECT * FROM posts
+        WHERE userid = $1 AND id = $2;
+    `;
+    return await client.query(query, [userid, postid]);
+}
+
 function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
 
-    console.log(req.session.userId)
     if (req.session.userId) {
         console.log(req.session.userId + " is authenticated");
         next(); // Proceed if authenticated
@@ -59,6 +70,32 @@ function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
         res.status(401).send('Unauthorized');
     }
 }
+
+router.get('/delete', ensureAuthenticated, async (req, res) => {
+    console.log("server delete")
+    const id = parseInt(req.query.id as string);
+    const userid = req.session.userId;
+    if (id && userid) {
+        const data = await verifyPostUser(userid, id);
+        console.log(data)
+        if (data.rows.length > 0){
+            const query = `
+                DELETE FROM posts
+                WHERE id = $1;
+            `;
+            await client.query(query, [id]);
+        }
+        res.status(200).json({
+            message: "Post deleted",
+            image: data.rows[0].image
+        });
+        return;
+    }
+
+    res.status(400).json({
+        message: "Invalid input"
+    });
+})
 
 router.get('/self', ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
@@ -87,7 +124,7 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
         // console.log(posts)
         setTimeout(() => {
             res.status(200).json(posts)
-        }, 200);
+        }, 100);
 
     } catch (err) {
         console.error(err);
@@ -109,6 +146,8 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
 
         let posts: PostData[] = new Array();
         results.rows.forEach(element => {
+            // bug here
+            console.log(element.id)
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -125,7 +164,7 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
         // console.log(posts)
         setTimeout(() => {
             res.status(200).json(posts)
-        }, 200);
+        }, 100);
 
     } catch (err) {
         console.error(err);
