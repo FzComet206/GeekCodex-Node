@@ -7,6 +7,7 @@ import { Request, Response, NextFunction } from "express";
 import { posts } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
+import { date, timestamp } from "drizzle-orm/pg-core";
 
 export interface PostData {
     id: number;
@@ -51,8 +52,6 @@ const fetchPostsSelf = async (limit: number, offset: number, userid: number) => 
 }
 
 const verifyPostUser = async (userid: number, postid: number) => {
-    console.log(userid)
-    console.log(postid)
 
     const query = `
         SELECT * FROM posts
@@ -77,7 +76,6 @@ router.get('/delete', ensureAuthenticated, async (req, res) => {
     const userid = req.session.userId;
     if (id && userid) {
         const data = await verifyPostUser(userid, id);
-        console.log(data)
         if (data.rows.length > 0){
             const query = `
                 DELETE FROM posts
@@ -147,7 +145,6 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
         let posts: PostData[] = new Array();
         results.rows.forEach(element => {
             // bug here
-            console.log(element.id)
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -179,7 +176,7 @@ router.post('/post', ensureAuthenticated, async (req, res) => {
 
     // todo: on post, index vocabularies
 
-    const { title, summary, link, image } = req.body;
+    const { title, summary, link, type} = req.body;
     
     const serverCheck = (
         (title.length < 1 || title.length > 80) ||
@@ -194,14 +191,19 @@ router.post('/post', ensureAuthenticated, async (req, res) => {
         return;
     }
 
+    const userId = req.session.userId!;
+    const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+    const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+
+    console.log("image postgres: " + image_postgres)
     // insertion operation
     if (req.session.userId) {
         await db.insert(posts).values({
-            userid: req.session.userId,
+            userid : userId,
             title: title,
             body: summary,
             link: link,
-            image: image
+            image: image_postgres 
         }).execute();
     } else {
         res.status(500).json({
@@ -210,7 +212,8 @@ router.post('/post', ensureAuthenticated, async (req, res) => {
     }
 
     res.status(200).json({
-        message: "Post successful"
+        message: "Post successful",
+        url: image_s3 
     });
 })
 
