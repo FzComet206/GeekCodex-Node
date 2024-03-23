@@ -1,11 +1,12 @@
-// interface UserData {
-	// req: Request & {
-		// session: Session &
-			// Partial<SessionData> & {
-				// userId?: number;
-				// name?: string;
-				// email?: string;
-			// };
-	// };
-	// res: Response;
-// };
+export interface PostData {
+    id: number;
+    title: string;
+    body: string;
+    link: string;
+    image: string;
+    created_at: Date;
+    likes: number;
+    author: string;
+    isLiked: boolean;
+    authorFollowed: boolean;
+}
