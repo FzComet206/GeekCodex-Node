@@ -18,6 +18,8 @@ export interface PostData {
     created_at: Date;
     likes: number;
     author: string;
+    isLiked: boolean;
+    authorFollowed: boolean;
 }
 // promisify file system functions
 const fetchPosts = async (limit: number, offset: number, seed: number) => {
@@ -70,6 +72,70 @@ function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
     }
 }
 
+router.get('/like', ensureAuthenticated, async (req, res) => {
+    const postid = parseInt(req.query.postid as string);
+    const userid = req.session.userId;
+
+    if (postid && userid) {
+        const isLikedQuery = `
+            SELECT * FROM likes
+            WHERE userid = $1 AND postid = $2;
+        `;
+        if ((await client.query(isLikedQuery, [userid, postid])).rows.length > 0) {
+            // dislike
+            const deleteLike = `
+                DELETE FROM likes
+                WHERE userid = $1 AND postid = $2;
+            `;
+            const updatePostLike = `
+                UPDATE posts
+                SET number_of_likes = number_of_likes - 1
+                WHERE id = $1;
+            `;
+            const getNumberOfLikes = `
+                SELECT number_of_likes FROM posts WHERE id = $1;
+            `;
+            await client.query(deleteLike, [userid, postid]);
+            await client.query(updatePostLike, [postid]);
+            const likes = await client.query(getNumberOfLikes, [postid]);
+            console.log("Post disliked")
+            res.status(200).json({
+                message: "Post disliked",
+                likes: likes.rows[0].number_of_likes,
+                liked: false 
+            });
+            return;
+        } else {
+            // like
+            const insertLike = `
+                INSERT INTO likes (userid, postid)
+                VALUES ($1, $2);
+            `;
+            const updatePostLike = `
+                UPDATE posts
+                SET number_of_likes = number_of_likes + 1
+                WHERE id = $1;
+            `;
+            const getNumberOfLikes = `
+                SELECT number_of_likes FROM posts WHERE id = $1;
+            `;
+            await client.query(insertLike, [userid, postid]);
+            await client.query(updatePostLike, [postid]);
+            const likes: any = await client.query(getNumberOfLikes, [postid]);
+            console.log("Post liked")
+            res.status(200).json({
+                message: "Post liked",
+                likes: likes.rows[0].number_of_likes,
+                liked: true
+            });
+            return;
+        }
+    } 
+    res.status(400).json({
+        message: "Invalid input"
+    });
+})
+
 router.get('/delete', ensureAuthenticated, async (req, res) => {
     console.log("server delete")
     const id = parseInt(req.query.id as string);
@@ -105,7 +171,12 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
         const results = await fetchPostsSelf(limit, offset, userid!)
 
         let posts: PostData[] = new Array();
-        results.rows.forEach(element => {
+        results.rows.forEach(async element => {
+            const isLiked = `
+                SELECT * FROM likes
+                WHERE userid = $1 AND postid = $2;
+                `;
+            const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -114,7 +185,9 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
                 image : element.image,
                 created_at : element.created_at,
                 likes : element.number_of_likes,
-                author: element.author
+                author: element.author,
+                isLiked: liked,
+                authorFollowed: false
             }
             posts.push(p);
         });
@@ -138,13 +211,18 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const seed = parseFloat(req.query.seed as string) || 0.5;
     const offset = (page - 1) * limit;
+    const userid = req.session.userId;
 
     try {
         const results = await fetchPosts(limit, offset, seed)
 
         let posts: PostData[] = new Array();
-        results.rows.forEach(element => {
-            // bug here
+        results.rows.forEach(async element => {
+            const isLiked = `
+                SELECT * FROM likes
+                WHERE userid = $1 AND postid = $2;
+                `;
+            const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -153,7 +231,9 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
                 image : element.image,
                 created_at : element.created_at,
                 likes : element.number_of_likes,
-                author: element.author
+                author: element.author,
+                isLiked: liked,
+                authorFollowed: false
             }
             posts.push(p);
         });

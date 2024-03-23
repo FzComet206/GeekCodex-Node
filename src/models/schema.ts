@@ -21,14 +21,6 @@ export const posts = pgTable("posts", {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const comments = pgTable("comments", {
-    id: serial('id').primaryKey(),
-    userid: integer('userid').notNull().references(() => users.id),
-    postid: integer('postid').notNull().references(() => posts.id),
-    body: text("body").notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
 export const likes = pgTable("likes", {
     id: serial('id').primaryKey(),
     userid: integer('userid').notNull().references(() => users.id),
@@ -44,14 +36,12 @@ export const userFollows = pgTable("user_follows", {
 
 export type Users = typeof users.$inferSelect
 export type Posts = typeof posts.$inferSelect
-export type Comments = typeof comments.$inferSelect
 export type Likes = typeof likes.$inferSelect
 export type UserFollows = typeof userFollows.$inferSelect
 
 // defining relations
 export const userRelations = relations(users, ({many}) => ({
     posts: many(posts),
-    comments: many(comments),
     likes: many(likes),
     followers: many(userFollows),
     following: many(userFollows)
@@ -59,12 +49,6 @@ export const userRelations = relations(users, ({many}) => ({
 
 export const postRelations = relations(posts, ({one, many}) => ({
     user: one(users, {fields: [posts.userid], references: [users.id]}),
-    comment: many(comments),
-}))
-
-export const commentRelations = relations(comments, ({one}) => ({
-    user: one(users, {fields: [comments.userid], references: [users.id]}),
-    post: one(posts, {fields: [comments.postid], references: [posts.id]}),
 }))
 
 export const likeRelations = relations(likes, ({one}) => ({
