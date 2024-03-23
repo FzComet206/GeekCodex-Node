@@ -1,35 +1,14 @@
 // main router
 import { Router } from "express";
-const router = Router();
 import authRouter from './auth';
-import { Request, Response, NextFunction } from "express";
-
 import { posts } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
-import { date, timestamp } from "drizzle-orm/pg-core";
 import { PostData } from "../utils/types";
 import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS} from "../utils/queries";
+import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
 
-
-const verifyPostUser = async (userid: number, postid: number) => {
-
-    const query = `
-        SELECT * FROM posts
-        WHERE userid = $1 AND id = $2;
-    `;
-    return await client.query(query, [userid, postid]);
-}
-
-function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
-
-    if (req.session.userId) {
-        console.log(req.session.userId + " is authenticated");
-        next(); // Proceed if authenticated
-    } else {
-        res.status(401).send('Unauthorized');
-    }
-}
+const router = Router();
 
 router.get('/like', ensureAuthenticated, async (req, res) => {
     const postid = parseInt(req.query.postid as string);
@@ -100,7 +79,7 @@ router.get('/delete', ensureAuthenticated, async (req, res) => {
     const id = parseInt(req.query.id as string);
     const userid = req.session.userId;
     if (id && userid) {
-        const data = await verifyPostUser(userid, id);
+        const data = await verifyPostUser(client, userid, id);
         if (data.rows.length > 0){
             const query = `
                 DELETE FROM posts

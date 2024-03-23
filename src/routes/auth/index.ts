@@ -1,30 +1,12 @@
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 import { Router } from "express";
-import argon2 from "argon2";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 import { db } from "../../index";
-
+import { hashPassword, verifyPassword, ensureAuthenticated } from "../../utils/helper";
 
 const router = Router();
-
-const hashPassword = async (password: string) => {
-    const hashed = await argon2.hash(password, {
-        type: argon2.argon2id
-    });
-    return hashed;
-}
-
-function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
-
-    if (req.session.userId) {
-        console.log(req.session.userId + " is authenticated");
-        next(); // Proceed if authenticated
-    } else {
-        res.status(401).send('Unauthorized');
-    }
-}
 
 router.get('/me', ensureAuthenticated, async (req, res) => {
 
@@ -53,7 +35,7 @@ router.post('/login', async (req, res) => {
 
     // passsword check
     try {
-        if (await argon2.verify(user[0].password!, req.body.password)) {
+        if (await verifyPassword(user[0].password!, req.body.password)) {
             req.session.userId = user[0].id;
             res.status(200).json({
                 username: user[0].username
