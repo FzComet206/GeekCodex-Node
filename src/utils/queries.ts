@@ -24,3 +24,13 @@ export const FETCH_LIKED_POSTS = `
         ORDER BY posts.created_at DESC
         LIMIT $2 OFFSET $3;
     `;
+
+export const DELETE_USER_FOLLOWS = `
+        DELETE FROM user_follows
+        WHERE followerid = $1 AND followingid = $2;
+    `;
+
+export const SET_USER_FOLLOWS = `
+        INSERT INTO user_follows (followerid, followingid)
+        VALUES ($1, $2);
+    `;

@@ -5,10 +5,59 @@ import { posts } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
 import { PostData } from "../utils/types";
-import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS} from "../utils/queries";
+import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS, SET_USER_FOLLOWS, DELETE_USER_FOLLOWS} from "../utils/queries";
 import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
 
 const router = Router();
+
+router.get('/follow', ensureAuthenticated, async (req, res) => {
+    const authorid = parseInt(req.query.authorid as string);
+    const userid = req.session.userId;
+
+    if (authorid && userid){
+        const isFollowedQuery = `
+            SELECT * FROM user_follows
+            WHERE followerid = $1 AND followingid = $2;
+        `;
+        if ((await client.query(isFollowedQuery, [userid, authorid])).rows.length > 0) {
+            // unfollow
+            try {
+                await client.query(DELETE_USER_FOLLOWS, [userid, authorid]);
+            } catch (err) {
+                console.error(err);
+                res.status(500).json({
+                    message: "Internal server error"
+                })
+            }
+            res.status(200).json({
+                message: "Unfollowed"
+            });
+            return;
+        } else {
+            // follow
+            const insertFollow = `
+                INSERT INTO user_follows (followerid, followingid)
+                VALUES ($1, $2);
+            `;
+            try {
+                await client.query(SET_USER_FOLLOWS, [userid, authorid]);
+            } catch (err) {
+                console.error(err);
+                res.status(500).json({
+                    message: "Internal server error"
+                })
+            }
+            res.status(200).json({
+                message: "Followed"
+            });
+            return;
+        }
+    }
+
+    res.status(400).json({
+        message: "Invalid input"
+    });
+})
 
 router.get('/like', ensureAuthenticated, async (req, res) => {
     const postid = parseInt(req.query.postid as string);
@@ -78,14 +127,17 @@ router.get('/delete', ensureAuthenticated, async (req, res) => {
     console.log("server delete")
     const id = parseInt(req.query.id as string);
     const userid = req.session.userId;
+
     if (id && userid) {
         const data = await verifyPostUser(client, userid, id);
+        console.log("verify")
         if (data.rows.length > 0){
             const query = `
                 DELETE FROM posts
                 WHERE id = $1;
             `;
             await client.query(query, [id]);
+            console.log("query")
         }
         res.status(200).json({
             message: "Post deleted",
@@ -115,6 +167,11 @@ router.get('/likedposts', ensureAuthenticated, async (req, res) => {
                 WHERE userid = $1 AND postid = $2;
                 `;
             const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
+            const isFollowedQuery = `
+                SELECT * FROM user_follows
+                WHERE followerid = $1 AND followingid = $2;
+            `;
+            const followed = (await client.query(isFollowedQuery, [userid, element.userid])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -124,8 +181,9 @@ router.get('/likedposts', ensureAuthenticated, async (req, res) => {
                 created_at : element.created_at,
                 likes : element.number_of_likes,
                 author: element.author,
+                authorid: element.userid,
                 isLiked: liked,
-                authorFollowed: false
+                authorFollowed: followed
             }
             posts.push(p);
         });
@@ -160,6 +218,11 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
                 WHERE userid = $1 AND postid = $2;
                 `;
             const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
+            const isFollowedQuery = `
+                SELECT * FROM user_follows
+                WHERE followerid = $1 AND followingid = $2;
+            `;
+            const followed = (await client.query(isFollowedQuery, [userid, element.userid])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -169,8 +232,9 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
                 created_at : element.created_at,
                 likes : element.number_of_likes,
                 author: element.author,
+                authorid: element.userid,
                 isLiked: liked,
-                authorFollowed: false
+                authorFollowed: followed
             }
             posts.push(p);
         });
@@ -206,6 +270,11 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
                 WHERE userid = $1 AND postid = $2;
                 `;
             const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
+            const isFollowedQuery = `
+                SELECT * FROM user_follows
+                WHERE followerid = $1 AND followingid = $2;
+            `;
+            const followed = (await client.query(isFollowedQuery, [userid, element.userid])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -215,8 +284,9 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
                 created_at : element.created_at,
                 likes : element.number_of_likes,
                 author: element.author,
+                authorid: element.userid,
                 isLiked: liked,
-                authorFollowed: false
+                authorFollowed: followed 
             }
             posts.push(p);
         });

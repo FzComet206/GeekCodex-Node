@@ -7,6 +7,7 @@ export interface PostData {
     created_at: Date;
     likes: number;
     author: string;
+    authorid: number;
     isLiked: boolean;
     authorFollowed: boolean;
 }
