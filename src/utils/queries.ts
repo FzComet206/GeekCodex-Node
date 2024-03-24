@@ -34,3 +34,29 @@ export const SET_USER_FOLLOWS = `
         INSERT INTO user_follows (followerid, followingid)
         VALUES ($1, $2);
     `;
+
+export const FETCH_FOLLOWER_INFO = `
+        SELECT users.id, users.username
+        FROM users
+        JOIN user_follows ON users.id = user_follows.followerid
+        WHERE user_follows.followingid = $1
+        LIMIT $2 OFFSET $3;
+    `;
+
+export const FETCH_FOLLOWING_INFO = `
+        SELECT users.id, users.username
+        FROM users
+        JOIN user_follows ON users.id = user_follows.followingid
+        WHERE user_follows.followerid = $1
+        LIMIT $2 OFFSET $3;
+    `;
+
+export const FETCH_LIKE_INFO = `
+        SELECT users.id, users.username, posts.title, likes.created_at
+        FROM likes
+        JOIN users ON likes.userid = users.id
+        JOIN posts ON likes.postid = posts.id
+        WHERE posts.userid = $1
+        ORDER BY likes.created_at DESC
+        LIMIT $2 OFFSET $3;
+    `;

@@ -4,11 +4,53 @@ import authRouter from './auth';
 import { posts } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
-import { PostData } from "../utils/types";
-import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS, SET_USER_FOLLOWS, DELETE_USER_FOLLOWS} from "../utils/queries";
+import { DashboardRow, PostData } from "../utils/types";
+import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS, SET_USER_FOLLOWS, DELETE_USER_FOLLOWS, FETCH_FOLLOWER_INFO, FETCH_FOLLOWING_INFO, FETCH_LIKE_INFO} from "../utils/queries";
 import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
+import { max } from "drizzle-orm";
 
 const router = Router();
+
+router.get('/dashboard', ensureAuthenticated, async (req, res) => {
+
+    const limit = parseInt(req.query.limit as string) || 4;
+    const page = parseInt(req.query.page as string) || 1;
+    const offset = (page - 1) * limit;
+
+    const userid = req.session.userId;
+    try {
+        const followers = await client.query(FETCH_FOLLOWER_INFO, [userid, limit, offset]);
+        const following = await client.query(FETCH_FOLLOWING_INFO, [userid, limit, offset]);
+        const likes = await client.query(FETCH_LIKE_INFO, [userid, limit, offset]);
+
+        let dashboard: DashboardRow[] = new Array();
+        const max = Math.max(followers.rows.length, following.rows.length, likes.rows.length);
+        for (let i = 0; i < max; i++) {
+            dashboard.push(
+                {
+                    follower: followers.rows[i]?.username || null,
+                    followerid: followers.rows[i]?.id || null,
+                    following: following.rows[i]?.username || null,
+                    followingid: following.rows[i]?.id || null,
+                    likeuser: likes.rows[i]?.username || null,
+                    likeuserid: likes.rows[i]?.id || null,
+                    likeposttitle: likes.rows[i]?.title || null,
+                    timestamp: likes.rows[i]?.created_at || null
+                }
+            )
+        }
+        setTimeout(() => {
+            res.status(200).json(dashboard)
+        }, 100);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
+
+})
 
 router.get('/follow', ensureAuthenticated, async (req, res) => {
     const authorid = parseInt(req.query.authorid as string);
