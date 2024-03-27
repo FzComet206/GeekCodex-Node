@@ -7,6 +7,16 @@ export const FETCH_SELF_POSTS = `
         LIMIT $1 OFFSET $2;
     `;
 
+
+export const FETCH_POSTS_SEARCH = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        WHERE search_vector @@ to_tsquery('english', $3)
+        ORDER BY ts_rank_cd(search_vector, to_tsquery('english', $3)) DESC
+        LIMIT $1 OFFSET $2;
+    `;
+
 export const FETCH_POSTS = `
         SELECT posts.* , users.username AS author 
         FROM posts

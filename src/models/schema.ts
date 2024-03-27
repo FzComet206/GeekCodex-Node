@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, integer, serial, text, customType, timestamp} from "drizzle-orm/pg-core";
+import { pgTable, integer, serial, text, timestamp} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id: serial('id').primaryKey(),
@@ -7,7 +7,6 @@ export const users = pgTable("users", {
     email: text('email').unique(),
     password: text('password'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    followerCount: integer('follower_count').notNull().default(0),
 });
 
 export const posts = pgTable("posts", {
@@ -60,3 +59,7 @@ export const userFollowRelations = relations(userFollows, ({one}) => ({
     follower: one(users, {fields: [userFollows.followerid], references: [users.id]}),
     following: one(users, {fields: [userFollows.followingid], references: [users.id]}),
 }))
+function to_tsvector(arg0: string, arg1: string): any {
+    throw new Error("Function not implemented.");
+}
+

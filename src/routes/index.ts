@@ -5,7 +5,16 @@ import { posts } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
 import { DashboardRow, PostData } from "../utils/types";
-import { FETCH_POSTS, FETCH_SELF_POSTS, FETCH_LIKED_POSTS, SET_USER_FOLLOWS, DELETE_USER_FOLLOWS, FETCH_FOLLOWER_INFO, FETCH_FOLLOWING_INFO, FETCH_LIKE_INFO} from "../utils/queries";
+import { 
+        FETCH_POSTS, 
+        FETCH_POSTS_SEARCH,
+        FETCH_SELF_POSTS, 
+        FETCH_LIKED_POSTS, 
+        SET_USER_FOLLOWS, 
+        DELETE_USER_FOLLOWS, 
+        FETCH_FOLLOWER_INFO, 
+        FETCH_FOLLOWING_INFO, 
+        FETCH_LIKE_INFO} from "../utils/queries";
 import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
 
 const router = Router();
@@ -15,6 +24,7 @@ router.get('/user', ensureAuthenticated, async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const id = parseInt(req.query.userid as string);
     const offset = (page - 1) * limit;
+    const userid = req.session.userId;
 
     try {
         const results = await client.query(FETCH_SELF_POSTS, [limit, offset, id]);
@@ -25,12 +35,12 @@ router.get('/user', ensureAuthenticated, async (req, res) => {
                 SELECT * FROM likes
                 WHERE userid = $1 AND postid = $2;
                 `;
-            const liked = (await client.query(isLiked, [id, element.id])).rows.length > 0;
+            const liked = (await client.query(isLiked, [userid, element.id])).rows.length > 0;
             const isFollowedQuery = `
                 SELECT * FROM user_follows
                 WHERE followerid = $1 AND followingid = $2;
             `;
-            const followed = (await client.query(isFollowedQuery, [id, element.userid])).rows.length > 0;
+            const followed = (await client.query(isFollowedQuery, [userid, element.userid])).rows.length > 0;
             const p: PostData = {
                 id : element.id,
                 title : element.title,
@@ -342,18 +352,28 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
             message: "Internal server error"
         })
     }
-
 })
 
 router.get('/feed', ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const seed = parseFloat(req.query.seed as string) || 0.5;
+    const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
 
+    console.log(search)
+
     try {
-        const results = await client.query(FETCH_POSTS, [limit, offset]);
+        let results;
+        if (search){
+            console.log(search)
+            results = await client.query(FETCH_POSTS_SEARCH, [limit, offset, search]);
+            console.log("search")
+        } else {
+            results = await client.query(FETCH_POSTS, [limit, offset]);
+            console.log("all")
+        }
 
         let posts: PostData[] = new Array();
         results.rows.forEach(async element => {
