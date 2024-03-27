@@ -3,7 +3,7 @@ import { Router } from "express";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { db } from "../../index";
-import { hashPassword, verifyPassword, ensureAuthenticated } from "../../utils/helper";
+import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES } from "../../utils/helper";
 import { v4 as uuidv4 } from 'uuid';
 import { redisClient } from "../../middlewares/createApp";
 
@@ -25,12 +25,15 @@ router.post('/changepassword', async (req, res) => {
         // store token in redis
         redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
         // send email with token
-        
+        const ses_response = await sendResetSES(email, token)
+        console.log(ses_response)
+
 
         res.status(200).json({
             message: "Password change request"
         })
-    } catch {
+    } catch (e) {
+        console.log(e)
         res.status(500).json({
             message: "Internal server error"
         })
