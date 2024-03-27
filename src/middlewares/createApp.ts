@@ -19,16 +19,16 @@ declare module "express-session" {
     }
 }
 
+const RedisStore = connectRedis(session);
+const redis = new Redis();
+export const redisClient = redis;
+
 export function creatApp(){
     const app = express();
     // app.use(bodyParser.json());
 
     // connect to redis server
     // const redisClient = createClient();
-
-    const RedisStore = connectRedis(session);
-    const redis = new Redis();
-
     // const redisStore = new RedisStore({ client: redis});
 
     // redisClient.connect().catch(err => {

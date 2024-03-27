@@ -14,7 +14,8 @@ import {
         DELETE_USER_FOLLOWS, 
         FETCH_FOLLOWER_INFO, 
         FETCH_FOLLOWING_INFO, 
-        FETCH_LIKE_INFO} from "../utils/queries";
+        FETCH_LIKE_INFO,
+        FETCH_POSTS_SORT_LIKE} from "../utils/queries";
 import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
 
 const router = Router();
@@ -359,6 +360,7 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const seed = parseFloat(req.query.seed as string) || 0.5;
     const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
+    const sort = (req.query.sort as string) || "";
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
 
@@ -367,12 +369,13 @@ router.get('/feed', ensureAuthenticated, async (req, res) => {
     try {
         let results;
         if (search){
-            console.log(search)
             results = await client.query(FETCH_POSTS_SEARCH, [limit, offset, search]);
-            console.log("search")
         } else {
-            results = await client.query(FETCH_POSTS, [limit, offset]);
-            console.log("all")
+            if (sort){
+                results = await client.query(FETCH_POSTS_SORT_LIKE, [limit, offset]);
+            } else {
+                results = await client.query(FETCH_POSTS, [limit, offset]);
+            }
         }
 
         let posts: PostData[] = new Array();

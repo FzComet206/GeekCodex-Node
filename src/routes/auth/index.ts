@@ -2,11 +2,40 @@
 import { Router } from "express";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
-import { Request, Response, NextFunction } from "express";
 import { db } from "../../index";
 import { hashPassword, verifyPassword, ensureAuthenticated } from "../../utils/helper";
+import { v4 as uuidv4 } from 'uuid';
+import { redisClient } from "../../middlewares/createApp";
 
 const router = Router();
+
+router.post('/changepassword', async (req, res) => {
+    const email = req.body.email;
+    const user = await db.select().from(users).where(eq(users.email, email)).execute();
+    if (user.length == 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+
+    // passsword check
+    try {
+
+        // generate uuid token
+        const token = uuidv4();
+        // store token in redis
+        redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
+        // send email with token
+        
+
+        res.status(200).json({
+            message: "Password change request"
+        })
+    } catch {
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
+})
 
 router.get('/me', ensureAuthenticated, async (req, res) => {
 
