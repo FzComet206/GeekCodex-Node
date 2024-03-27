@@ -355,16 +355,13 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
     }
 })
 
-router.get('/feed', ensureAuthenticated, async (req, res) => {
+router.get('/feed', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
-    const seed = parseFloat(req.query.seed as string) || 0.5;
     const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
     const sort = (req.query.sort as string) || "";
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
-
-    console.log(search)
 
     try {
         let results;

@@ -21,7 +21,7 @@ export const FETCH_POSTS_SORT_LIKE = `
         SELECT posts.* , users.username AS author 
         FROM posts
         JOIN users ON posts.userid = users.id
-        ORDER BY posts.number_of_Likes DESC
+        ORDER BY posts.number_of_Likes DESC, posts.created_at DESC
         LIMIT $1 OFFSET $2;
     `;
 
