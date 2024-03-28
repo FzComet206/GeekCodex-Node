@@ -49,7 +49,9 @@ router.get('/me', feedLimiter, ensureAuthenticated, async (req, res) => {
         })
         return;
     }
+
     res.status(200).json({
+        is_op: user[0].isop,
         username: user[0].username,
     })
 

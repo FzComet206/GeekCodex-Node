@@ -15,6 +15,13 @@
       "when": 1711153329978,
       "tag": "0001_great_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1711600943071,
+      "tag": "0002_pink_obadiah_stane",
+      "breakpoints": true
     }
   ]
 }

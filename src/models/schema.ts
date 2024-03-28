@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, integer, serial, text, timestamp} from "drizzle-orm/pg-core";
+import { pgTable, integer, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id: serial('id').primaryKey(),
@@ -7,6 +7,8 @@ export const users = pgTable("users", {
     email: text('email').unique(),
     password: text('password'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    isop: integer('is_op').notNull().default(0),
+    numberofPosts: integer('number_of_posts').notNull().default(0),
 });
 
 export const posts = pgTable("posts", {

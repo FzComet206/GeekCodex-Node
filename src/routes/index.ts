@@ -1,7 +1,7 @@
 // main router
 import { Router } from "express";
 import authRouter from './auth';
-import { posts } from "../models/schema";
+import { posts, users } from "../models/schema";
 import { db } from "../index";
 import client from "../config/drizzle";
 import { DashboardRow, PostData } from "../utils/types";
@@ -232,21 +232,49 @@ router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
     const userid = req.session.userId;
 
     if (id && userid) {
-        const data = await verifyPostUser(client, userid, id);
-        console.log("verify")
-        if (data.rows.length > 0){
+        console.log("id and userid")
+        const user = await client.query(`SELECT * FROM users WHERE id = $1`, [userid]);
+        if (user.rows[0].is_op == 1) {
+            const ref = await client.query(`SELECT * FROM posts WHERE id = $1`, [id]);
+
+            const deleteLikes = `
+                DELETE FROM likes
+                WHERE postid = $1;
+            `;
+            await client.query(deleteLikes, [id]);
             const query = `
                 DELETE FROM posts
                 WHERE id = $1;
             `;
             await client.query(query, [id]);
-            console.log("query")
+            console.log("op delete")
+            res.status(200).json({
+                message: "Post deleted by op",
+                image: ref.rows[0].image
+            });
+            return;
         }
-        res.status(200).json({
-            message: "Post deleted",
-            image: data.rows[0].image
-        });
-        return;
+
+        const data = await verifyPostUser(client, userid, id);
+        console.log("verify")
+        if (data.rows.length > 0) {
+            const deleteLikes = `
+                DELETE FROM likes
+                WHERE postid = $1;
+            `;
+            await client.query(deleteLikes, [id]);
+            const query = `
+                DELETE FROM posts
+                WHERE id = $1;
+            `;
+            await client.query(query, [id]);
+            console.log("normal delete")
+            res.status(200).json({
+                message: "Post deleted",
+                image: data.rows[0].image
+            });
+            return;
+        }
     }
 
     res.status(400).json({
@@ -420,6 +448,19 @@ router.get('/feed', feedLimiter, async (req, res) => {
 router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
 
     // todo: on post, index vocabularies
+    const check_Postcount_query = `
+        SELECT * FROM posts
+        WHERE userid = $1;
+    `;
+    
+    // a account can only have 20 posts maximum for now
+    if ((await client.query(check_Postcount_query, [req.session.userId])).rows.length > 20) {
+        console.log("Post limit reached")
+        res.status(400).json({
+            message: "Post limit reached"
+        })
+        return;
+    }
 
     const { title, summary, link, type} = req.body;
     
@@ -440,7 +481,6 @@ router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
     const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
     const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
 
-    console.log("image postgres: " + image_postgres)
     // insertion operation
     if (req.session.userId) {
         await db.insert(posts).values({
