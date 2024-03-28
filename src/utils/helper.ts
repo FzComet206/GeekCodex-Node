@@ -1,7 +1,34 @@
 import { Request, Response, NextFunction } from "express";
 import argon2 from "argon2";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import client from "../config/drizzle";
+import rateLimit from "express-rate-limit";
+
+export const deleteLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 60, // limit each IP to 6 requests per windowMs
+});
+
+export const postLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 6, // limit each IP to 6 requests per windowMs
+});
+
+// used for all auth operations
+export const authLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 12, // limit each IP to 6 requests per windowMs
+});
+
+// used for all feed and me operations
+export const feedLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 120, // limit each IP to 120 requests per windowMs
+});
+
+export const actionLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 60, // limit each IP to 6 requests per windowMs
+});
 
 export const sendResetSES = async (to: string, url: string) => {
 

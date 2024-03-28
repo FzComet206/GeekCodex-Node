@@ -3,13 +3,13 @@ import { Router } from "express";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { db } from "../../index";
-import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES } from "../../utils/helper";
+import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES, authLimiter, feedLimiter } from "../../utils/helper";
 import { v4 as uuidv4 } from 'uuid';
 import { redisClient } from "../../middlewares/createApp";
 
 const router = Router();
 
-router.post('/changepassword', async (req, res) => {
+router.post('/changepassword', authLimiter, async (req, res) => {
     const email = req.body.email;
     const user = await db.select().from(users).where(eq(users.email, email)).execute();
     if (user.length == 0) {
@@ -40,7 +40,7 @@ router.post('/changepassword', async (req, res) => {
     }
 })
 
-router.get('/me', ensureAuthenticated, async (req, res) => {
+router.get('/me', feedLimiter, ensureAuthenticated, async (req, res) => {
 
     const user = await db.select().from(users).where(eq(users.id, req.session.userId!)).execute();
     if (user.length == 0) {
@@ -55,7 +55,7 @@ router.get('/me', ensureAuthenticated, async (req, res) => {
 
 })
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
 
     const email = req.body.email;
     const user = await db.select().from(users).where(eq(users.email, email)).execute();
@@ -84,7 +84,7 @@ router.post('/login', async (req, res) => {
     }
 })
 
-router.post('/logout', async (req, res) => {
+router.post('/logout', authLimiter, async (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             res.status(500).json({
@@ -104,7 +104,7 @@ router.post('/logout', async (req, res) => {
 })
 
 
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
 
     const name = req.body.name;
     const email = req.body.email;

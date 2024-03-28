@@ -16,11 +16,11 @@ import {
         FETCH_FOLLOWING_INFO, 
         FETCH_LIKE_INFO,
         FETCH_POSTS_SORT_LIKE} from "../utils/queries";
-import { ensureAuthenticated, verifyPostUser } from "../utils/helper";
+import { actionLimiter, deleteLimiter, ensureAuthenticated, feedLimiter, postLimiter, verifyPostUser } from "../utils/helper";
 
 const router = Router();
 
-router.get('/user', ensureAuthenticated, async (req, res) => {
+router.get('/user', feedLimiter, ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const id = parseInt(req.query.userid as string);
@@ -72,7 +72,7 @@ router.get('/user', ensureAuthenticated, async (req, res) => {
 
 })
 
-router.get('/dashboard', ensureAuthenticated, async (req, res) => {
+router.get('/dashboard', feedLimiter, ensureAuthenticated, async (req, res) => {
 
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
@@ -113,7 +113,7 @@ router.get('/dashboard', ensureAuthenticated, async (req, res) => {
 
 })
 
-router.get('/follow', ensureAuthenticated, async (req, res) => {
+router.get('/follow', actionLimiter, ensureAuthenticated, async (req, res) => {
     const authorid = parseInt(req.query.authorid as string);
     const userid = req.session.userId;
 
@@ -162,7 +162,7 @@ router.get('/follow', ensureAuthenticated, async (req, res) => {
     });
 })
 
-router.get('/like', ensureAuthenticated, async (req, res) => {
+router.get('/like', actionLimiter, ensureAuthenticated, async (req, res) => {
     const postid = parseInt(req.query.postid as string);
     const userid = req.session.userId;
 
@@ -226,7 +226,7 @@ router.get('/like', ensureAuthenticated, async (req, res) => {
     });
 })
 
-router.get('/delete', ensureAuthenticated, async (req, res) => {
+router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
     console.log("server delete")
     const id = parseInt(req.query.id as string);
     const userid = req.session.userId;
@@ -254,7 +254,7 @@ router.get('/delete', ensureAuthenticated, async (req, res) => {
     });
 })
 
-router.get('/likedposts', ensureAuthenticated, async (req, res) => {
+router.get('/likedposts', feedLimiter, ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const offset = (page - 1) * limit;
@@ -305,7 +305,7 @@ router.get('/likedposts', ensureAuthenticated, async (req, res) => {
 
 })
 
-router.get('/self', ensureAuthenticated, async (req, res) => {
+router.get('/self', feedLimiter, ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const offset = (page - 1) * limit;
@@ -355,7 +355,7 @@ router.get('/self', ensureAuthenticated, async (req, res) => {
     }
 })
 
-router.get('/feed', async (req, res) => {
+router.get('/feed', feedLimiter, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
@@ -417,7 +417,7 @@ router.get('/feed', async (req, res) => {
 
 })
 
-router.post('/post', ensureAuthenticated, async (req, res) => {
+router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
 
     // todo: on post, index vocabularies
 
