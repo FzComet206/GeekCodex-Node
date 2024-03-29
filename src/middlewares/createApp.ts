@@ -25,19 +25,7 @@ export const redisClient = redis;
 
 export function creatApp(){
     const app = express();
-    // app.use(bodyParser.json());
-
-    // connect to redis server
-    // const redisClient = createClient();
-    // const redisStore = new RedisStore({ client: redis});
-
-    // redisClient.connect().catch(err => {
-            // console.log("redis connect error")
-            // console.log(err)});
-    // use cors middleware
-
     app.use(cors(corsOptions))
-    // use express session middleware and store session in redis
 
     app.use(express.json())
 

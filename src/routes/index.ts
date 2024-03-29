@@ -227,12 +227,10 @@ router.get('/like', actionLimiter, ensureAuthenticated, async (req, res) => {
 })
 
 router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
-    console.log("server delete")
     const id = parseInt(req.query.id as string);
     const userid = req.session.userId;
 
     if (id && userid) {
-        console.log("id and userid")
         const user = await client.query(`SELECT * FROM users WHERE id = $1`, [userid]);
         if (user.rows[0].is_op == 1) {
             const ref = await client.query(`SELECT * FROM posts WHERE id = $1`, [id]);
@@ -247,7 +245,6 @@ router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
                 WHERE id = $1;
             `;
             await client.query(query, [id]);
-            console.log("op delete")
             res.status(200).json({
                 message: "Post deleted by op",
                 image: ref.rows[0].image
@@ -256,7 +253,6 @@ router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
         }
 
         const data = await verifyPostUser(client, userid, id);
-        console.log("verify")
         if (data.rows.length > 0) {
             const deleteLikes = `
                 DELETE FROM likes
@@ -268,7 +264,6 @@ router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
                 WHERE id = $1;
             `;
             await client.query(query, [id]);
-            console.log("normal delete")
             res.status(200).json({
                 message: "Post deleted",
                 image: data.rows[0].image

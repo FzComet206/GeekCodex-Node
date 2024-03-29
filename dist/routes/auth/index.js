@@ -8,33 +8,64 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 // copilot keys: alt + ], ctrl + enter, ctrl + -> <-  and generating code using comments
 const express_1 = require("express");
-const argon2_1 = __importDefault(require("argon2"));
 const schema_1 = require("../../models/schema");
 const drizzle_orm_1 = require("drizzle-orm");
 const index_1 = require("../../index");
+const helper_1 = require("../../utils/helper");
+const uuid_1 = require("uuid");
+const createApp_1 = require("../../middlewares/createApp");
 const router = (0, express_1.Router)();
-const hashPassword = (password) => __awaiter(void 0, void 0, void 0, function* () {
-    const hashed = yield argon2_1.default.hash(password, {
-        type: argon2_1.default.argon2id
-    });
-    return hashed;
-});
-function ensureAuthenticated(req, res, next) {
-    if (req.session.userId) {
-        console.log(req.session.userId + " is authenticated");
-        next(); // Proceed if authenticated
+router.post('/resetpassword', helper_1.authLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const token = req.body.token;
+    const password = req.body.password;
+    const email = yield createApp_1.redisClient.get(`reset:${token}`);
+    if (email) {
+        // reset password
+        const hashed = yield (0, helper_1.hashPassword)(password);
+        index_1.db.update(schema_1.users).set({ password: hashed }).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+        yield createApp_1.redisClient.del(`reset:${token}`);
+        res.status(200).json({
+            message: "Password reset"
+        });
     }
     else {
-        res.status(401).send('Unauthorized');
+        res.status(404).json({
+            message: "Token not found"
+        });
     }
-}
-router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+}));
+router.post('/changepassword', helper_1.authLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const email = req.body.email;
+    const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
+    if (user.length == 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+    // passsword check
+    try {
+        // generate uuid token
+        const token = (0, uuid_1.v4)();
+        const url = process.env.ORIGIN + `/auth/resetpassword/${token}`;
+        // store token in redis
+        createApp_1.redisClient.set(`reset:${token}`, email, 'EX', 60 * 15);
+        // send email with token
+        const ses_response = yield (0, helper_1.sendResetSES)(email, url);
+        console.log(ses_response);
+        res.status(200).json({
+            message: "Password change request"
+        });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}));
+router.get('/me', helper_1.feedLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.id, req.session.userId)).execute();
     if (user.length == 0) {
         res.status(404).json({
@@ -43,10 +74,11 @@ router.get('/me', ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, v
         return;
     }
     res.status(200).json({
+        is_op: user[0].isop,
         username: user[0].username,
     });
 }));
-router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/login', helper_1.authLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const email = req.body.email;
     const user = yield index_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).execute();
     console.log(req.body);
@@ -56,7 +88,7 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     // passsword check
     try {
-        if (yield argon2_1.default.verify(user[0].password, req.body.password)) {
+        if (yield (0, helper_1.verifyPassword)(user[0].password, req.body.password)) {
             req.session.userId = user[0].id;
             res.status(200).json({
                 username: user[0].username
@@ -74,7 +106,7 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
     }
 }));
-router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/logout', helper_1.authLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     req.session.destroy((err) => {
         if (err) {
             res.status(500).json({
@@ -93,7 +125,7 @@ router.post('/logout', (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
     });
 }));
-router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/register', helper_1.authLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const name = req.body.name;
     const email = req.body.email;
     const password = req.body.password;
@@ -115,7 +147,7 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
         return;
     }
     // register user
-    const hashed = hashPassword(req.body.password);
+    const hashed = (0, helper_1.hashPassword)(req.body.password);
     index_1.db.insert(schema_1.users).values({
         username: req.body.name,
         email: req.body.email,

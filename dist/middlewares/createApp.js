@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.creatApp = void 0;
+exports.creatApp = exports.redisClient = void 0;
 const express_1 = __importDefault(require("express"));
 const routes_1 = __importDefault(require("../routes"));
 const cors_1 = __importDefault(require("cors"));
@@ -16,13 +16,14 @@ const corsOptions = {
     origin: process.env.ORIGIN,
     credentials: true
 };
+const RedisStore = (0, connect_redis_1.default)(express_session_1.default);
+const redis = new ioredis_1.default();
+exports.redisClient = redis;
 function creatApp() {
     const app = (0, express_1.default)();
     // app.use(bodyParser.json());
     // connect to redis server
     // const redisClient = createClient();
-    const RedisStore = (0, connect_redis_1.default)(express_session_1.default);
-    const redis = new ioredis_1.default();
     // const redisStore = new RedisStore({ client: redis});
     // redisClient.connect().catch(err => {
     // console.log("redis connect error")
