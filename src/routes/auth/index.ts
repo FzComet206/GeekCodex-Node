@@ -40,7 +40,7 @@ router.post('/changepassword', authLimiter, async (req, res) => {
 
         // generate uuid token
         const token = uuidv4();
-        const url = `http://localhost:3000/auth/resetpassword/${token}`
+        const url = process.env.ORIGIN + `/auth/resetpassword/${token}`
         // store token in redis
         redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
         // send email with token
