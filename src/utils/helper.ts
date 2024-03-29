@@ -50,19 +50,16 @@ export const sendResetSES = async (to: string, url: string) => {
             "Body": {
             "Html": {
                 "Charset": "UTF-8",
-                "Data": `click the following link to reset your password: ${url}`
+                // "Data": `click the following link to reset your password: ${url}`
+                "Data": "<html><body><h3>Link Valid for 15 Minutes</h3><p>Click the following link to reset your password: <a href='" + url + `'>${url}</a></p></body></html>`
             },
-            "Text": {
-                "Charset": "UTF-8",
-                "Data": "This is the message body in text format."
-            }
             },
             "Subject": {
             "Charset": "UTF-8",
-            "Data": "Password reset for you GeekCodex account"
+            "Data": "GeekCodex Password Reset"
             }
         },
-        "Source": "GeekCodex@geekcodex.org",
+        "Source": "no-reply@geekcodex.org",
     };
 
     const command = new SendEmailCommand(input);

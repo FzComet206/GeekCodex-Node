@@ -9,6 +9,25 @@ import { redisClient } from "../../middlewares/createApp";
 
 const router = Router();
 
+router.post('/resetpassword', authLimiter, async (req, res) => {
+    const token = req.body.token;
+    const password = req.body.password;
+    const email = await redisClient.get(`reset:${token}`);
+    if (email) {
+        // reset password
+        const hashed = await hashPassword(password);
+        db.update(users).set({ password: hashed }).where(eq(users.email, email)).execute();
+        await redisClient.del(`reset:${token}`);
+        res.status(200).json({
+            message: "Password reset"
+        })
+    } else {
+        res.status(404).json({
+            message: "Token not found"
+        })
+    }
+})
+
 router.post('/changepassword', authLimiter, async (req, res) => {
     const email = req.body.email;
     const user = await db.select().from(users).where(eq(users.email, email)).execute();
@@ -16,16 +35,16 @@ router.post('/changepassword', authLimiter, async (req, res) => {
         res.status(404).json({ message: "User not found" });
         return;
     }
-
     // passsword check
     try {
 
         // generate uuid token
         const token = uuidv4();
+        const url = `http://localhost:3000/auth/resetpassword/${token}`
         // store token in redis
         redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
         // send email with token
-        const ses_response = await sendResetSES(email, token)
+        const ses_response = await sendResetSES(email, url)
         console.log(ses_response)
 
 
