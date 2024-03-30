@@ -1,17 +1,19 @@
-# build
-FROM node:alpine AS builder
-WORKDIR /usr/src/app
+FROM node
+
+WORKDIR /usr/app
 
 COPY package*.json ./
+
 RUN npm install
-COPY tsconfig.json .
-COPY src ./src
+
+COPY . .
+
 RUN npm run build
 
-# run
-FROM node:alpine
-WORKDIR /usr/src/app
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /user/src/app/node_modules ./node_modules
+COPY .env ./dist
+
+WORKDIR ./dist
 EXPOSE 3001
-CMD ["npm", "start"]
+CMD ["node", "index.js"]
+
+

@@ -20,7 +20,14 @@ declare module "express-session" {
 }
 
 const RedisStore = connectRedis(session);
-const redis = new Redis();
+const redis = new Redis(
+    {
+    
+        host: process.env.REDISHOST,
+        port: parseInt(process.env.REDISPORT || '6379'),
+    }
+);
+console.log("redis connected")
 export const redisClient = redis;
 
 export function creatApp(){
@@ -43,6 +50,7 @@ export function creatApp(){
                 maxAge: 1000 * 60 * 60 * 24,
             }})
         );
+    
 
     // use routes
     app.use('/api', routes);

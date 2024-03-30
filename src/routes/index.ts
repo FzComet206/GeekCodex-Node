@@ -117,164 +117,183 @@ router.get('/follow', actionLimiter, ensureAuthenticated, async (req, res) => {
     const authorid = parseInt(req.query.authorid as string);
     const userid = req.session.userId;
 
-    if (authorid && userid){
-        const isFollowedQuery = `
-            SELECT * FROM user_follows
-            WHERE followerid = $1 AND followingid = $2;
-        `;
-        if ((await client.query(isFollowedQuery, [userid, authorid])).rows.length > 0) {
-            // unfollow
-            try {
-                await client.query(DELETE_USER_FOLLOWS, [userid, authorid]);
-            } catch (err) {
-                console.error(err);
-                res.status(500).json({
-                    message: "Internal server error"
-                })
-            }
-            res.status(200).json({
-                message: "Unfollowed"
-            });
-            return;
-        } else {
-            // follow
-            const insertFollow = `
-                INSERT INTO user_follows (followerid, followingid)
-                VALUES ($1, $2);
+    try {
+        if (authorid && userid){
+            const isFollowedQuery = `
+                SELECT * FROM user_follows
+                WHERE followerid = $1 AND followingid = $2;
             `;
-            try {
-                await client.query(SET_USER_FOLLOWS, [userid, authorid]);
-            } catch (err) {
-                console.error(err);
-                res.status(500).json({
-                    message: "Internal server error"
-                })
+            if ((await client.query(isFollowedQuery, [userid, authorid])).rows.length > 0) {
+                // unfollow
+                try {
+                    await client.query(DELETE_USER_FOLLOWS, [userid, authorid]);
+                } catch (err) {
+                    console.error(err);
+                    res.status(500).json({
+                        message: "Internal server error"
+                    })
+                }
+                res.status(200).json({
+                    message: "Unfollowed"
+                });
+                return;
+            } else {
+                // follow
+                const insertFollow = `
+                    INSERT INTO user_follows (followerid, followingid)
+                    VALUES ($1, $2);
+                `;
+                try {
+                    await client.query(SET_USER_FOLLOWS, [userid, authorid]);
+                } catch (err) {
+                    console.error(err);
+                    res.status(500).json({
+                        message: "Internal server error"
+                    })
+                }
+                res.status(200).json({
+                    message: "Followed"
+                });
+                return;
             }
-            res.status(200).json({
-                message: "Followed"
-            });
-            return;
         }
-    }
 
-    res.status(400).json({
-        message: "Invalid input"
-    });
+        res.status(400).json({
+            message: "Invalid input"
+        });
+    } catch {
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
 })
 
 router.get('/like', actionLimiter, ensureAuthenticated, async (req, res) => {
     const postid = parseInt(req.query.postid as string);
     const userid = req.session.userId;
 
-    if (postid && userid) {
-        const isLikedQuery = `
-            SELECT * FROM likes
-            WHERE userid = $1 AND postid = $2;
-        `;
-        if ((await client.query(isLikedQuery, [userid, postid])).rows.length > 0) {
-            // dislike
-            const deleteLike = `
-                DELETE FROM likes
+    try {
+        if (postid && userid) {
+            const isLikedQuery = `
+                SELECT * FROM likes
                 WHERE userid = $1 AND postid = $2;
             `;
-            const updatePostLike = `
-                UPDATE posts
-                SET number_of_likes = number_of_likes - 1
-                WHERE id = $1;
-            `;
-            const getNumberOfLikes = `
-                SELECT number_of_likes FROM posts WHERE id = $1;
-            `;
-            await client.query(deleteLike, [userid, postid]);
-            await client.query(updatePostLike, [postid]);
-            const likes = await client.query(getNumberOfLikes, [postid]);
-            console.log("Post disliked")
-            res.status(200).json({
-                message: "Post disliked",
-                likes: likes.rows[0].number_of_likes,
-                liked: false 
-            });
-            return;
-        } else {
-            // like
-            const insertLike = `
-                INSERT INTO likes (userid, postid)
-                VALUES ($1, $2);
-            `;
-            const updatePostLike = `
-                UPDATE posts
-                SET number_of_likes = number_of_likes + 1
-                WHERE id = $1;
-            `;
-            const getNumberOfLikes = `
-                SELECT number_of_likes FROM posts WHERE id = $1;
-            `;
-            await client.query(insertLike, [userid, postid]);
-            await client.query(updatePostLike, [postid]);
-            const likes: any = await client.query(getNumberOfLikes, [postid]);
-            console.log("Post liked")
-            res.status(200).json({
-                message: "Post liked",
-                likes: likes.rows[0].number_of_likes,
-                liked: true
-            });
-            return;
-        }
-    } 
-    res.status(400).json({
-        message: "Invalid input"
-    });
+            if ((await client.query(isLikedQuery, [userid, postid])).rows.length > 0) {
+                // dislike
+                const deleteLike = `
+                    DELETE FROM likes
+                    WHERE userid = $1 AND postid = $2;
+                `;
+                const updatePostLike = `
+                    UPDATE posts
+                    SET number_of_likes = number_of_likes - 1
+                    WHERE id = $1;
+                `;
+                const getNumberOfLikes = `
+                    SELECT number_of_likes FROM posts WHERE id = $1;
+                `;
+                await client.query(deleteLike, [userid, postid]);
+                await client.query(updatePostLike, [postid]);
+                const likes = await client.query(getNumberOfLikes, [postid]);
+                console.log("Post disliked")
+                res.status(200).json({
+                    message: "Post disliked",
+                    likes: likes.rows[0].number_of_likes,
+                    liked: false 
+                });
+                return;
+            } else {
+                // like
+                const insertLike = `
+                    INSERT INTO likes (userid, postid)
+                    VALUES ($1, $2);
+                `;
+                const updatePostLike = `
+                    UPDATE posts
+                    SET number_of_likes = number_of_likes + 1
+                    WHERE id = $1;
+                `;
+                const getNumberOfLikes = `
+                    SELECT number_of_likes FROM posts WHERE id = $1;
+                `;
+                await client.query(insertLike, [userid, postid]);
+                await client.query(updatePostLike, [postid]);
+                const likes: any = await client.query(getNumberOfLikes, [postid]);
+                console.log("Post liked")
+                res.status(200).json({
+                    message: "Post liked",
+                    likes: likes.rows[0].number_of_likes,
+                    liked: true
+                });
+                return;
+            }
+        } 
+        res.status(400).json({
+            message: "Invalid input"
+        });
+    } catch {
+        res.status(500).json({
+            message: "Internal server error"
+        })
+    }
 })
 
 router.get('/delete', deleteLimiter, ensureAuthenticated, async (req, res) => {
+
     const id = parseInt(req.query.id as string);
     const userid = req.session.userId;
 
-    if (id && userid) {
-        const user = await client.query(`SELECT * FROM users WHERE id = $1`, [userid]);
-        if (user.rows[0].is_op == 1) {
-            const ref = await client.query(`SELECT * FROM posts WHERE id = $1`, [id]);
+    try {
+        if (id && userid) {
+            const user = await client.query(`SELECT * FROM users WHERE id = $1`, [userid]);
+            if (user.rows[0].is_op == 1) {
+                const ref = await client.query(`SELECT * FROM posts WHERE id = $1`, [id]);
 
-            const deleteLikes = `
-                DELETE FROM likes
-                WHERE postid = $1;
-            `;
-            await client.query(deleteLikes, [id]);
-            const query = `
-                DELETE FROM posts
-                WHERE id = $1;
-            `;
-            await client.query(query, [id]);
-            res.status(200).json({
-                message: "Post deleted by op",
-                image: ref.rows[0].image
-            });
-            return;
+                const deleteLikes = `
+                    DELETE FROM likes
+                    WHERE postid = $1;
+                `;
+                await client.query(deleteLikes, [id]);
+                const query = `
+                    DELETE FROM posts
+                    WHERE id = $1;
+                `;
+                await client.query(query, [id]);
+                res.status(200).json({
+                    message: "Post deleted by op",
+                    image: ref.rows[0].image
+                });
+                return;
+            }
+
+            const data = await verifyPostUser(client, userid, id);
+            if (data.rows.length > 0) {
+                const deleteLikes = `
+                    DELETE FROM likes
+                    WHERE postid = $1;
+                `;
+                await client.query(deleteLikes, [id]);
+                const query = `
+                    DELETE FROM posts
+                    WHERE id = $1;
+                `;
+                await client.query(query, [id]);
+                res.status(200).json({
+                    message: "Post deleted",
+                    image: data.rows[0].image
+                });
+                return;
+            }
         }
 
-        const data = await verifyPostUser(client, userid, id);
-        if (data.rows.length > 0) {
-            const deleteLikes = `
-                DELETE FROM likes
-                WHERE postid = $1;
-            `;
-            await client.query(deleteLikes, [id]);
-            const query = `
-                DELETE FROM posts
-                WHERE id = $1;
-            `;
-            await client.query(query, [id]);
-            res.status(200).json({
-                message: "Post deleted",
-                image: data.rows[0].image
-            });
-            return;
-        }
+        res.status(400).json({
+            message: "Invalid input"
+        });
+    } catch {
+        res.status(500).json({
+            message: "Internal server error"
+        })
     }
-
-    res.status(400).json({
-        message: "Invalid input"
-    });
 })
 
 router.get('/likedposts', feedLimiter, ensureAuthenticated, async (req, res) => {
@@ -447,54 +466,60 @@ router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
         SELECT * FROM posts
         WHERE userid = $1;
     `;
-    
-    // a account can only have 20 posts maximum for now
-    if ((await client.query(check_Postcount_query, [req.session.userId])).rows.length > 20) {
-        console.log("Post limit reached")
-        res.status(400).json({
-            message: "Post limit reached"
-        })
-        return;
-    }
 
-    const { title, summary, link, type} = req.body;
-    
-    const serverCheck = (
-        (title.length < 1 || title.length > 80) ||
-        (summary.length < 1 || summary.length > 5000) ||
-        (link.length > 200)
-    );
+    try {
+        // a account can only have 20 posts maximum for now
+        if ((await client.query(check_Postcount_query, [req.session.userId])).rows.length > 20) {
+            console.log("Post limit reached")
+            res.status(400).json({
+                message: "Post limit reached"
+            })
+            return;
+        }
 
-    if (serverCheck) {
-        res.status(400).json({
-            message: "Invalid input"
-        })
-        return;
-    }
+        const { title, summary, link, type} = req.body;
+        
+        const serverCheck = (
+            (title.length < 1 || title.length > 80) ||
+            (summary.length < 1 || summary.length > 5000) ||
+            (link.length > 200)
+        );
 
-    const userId = req.session.userId!;
-    const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
-    const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+        if (serverCheck) {
+            res.status(400).json({
+                message: "Invalid input"
+            })
+            return;
+        }
 
-    // insertion operation
-    if (req.session.userId) {
-        await db.insert(posts).values({
-            userid : userId,
-            title: title,
-            body: summary,
-            link: link,
-            image: image_postgres 
-        }).execute();
-    } else {
+        const userId = req.session.userId!;
+        const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+        const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+
+        // insertion operation
+        if (req.session.userId) {
+            await db.insert(posts).values({
+                userid : userId,
+                title: title,
+                body: summary,
+                link: link,
+                image: image_postgres 
+            }).execute();
+        } else {
+            res.status(500).json({
+                message: "session userid not found"
+            })
+        }
+
+        res.status(200).json({
+            message: "Post successful",
+            url: image_s3 
+        });
+    } catch {
         res.status(500).json({
-            message: "session userid not found"
+            message: "Internal server error"
         })
     }
-
-    res.status(200).json({
-        message: "Post successful",
-        url: image_s3 
-    });
 })
 
 router.use('/auth', authRouter);

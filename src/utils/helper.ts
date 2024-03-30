@@ -67,6 +67,43 @@ export const sendResetSES = async (to: string, url: string) => {
     return await client.send(command);
 }
 
+export const sendVerifySES = async (to: string, url: string) => {
+
+    const client = new SESClient({ 
+        region: process.env.SES_REGION!,
+        credentials: {
+            accessKeyId: process.env.SES_KEY!,
+            secretAccessKey: process.env.SES_SECRET!
+        }
+    });
+
+    const input = {
+        "Destination": {
+            "ToAddresses": [
+                `${to}`
+            ]
+        },
+        "Message": {
+            "Body": {
+            "Html": {
+                "Charset": "UTF-8",
+                // "Data": `click the following link to reset your password: ${url}`
+                "Data": "<html><body><h3>Link Valid for 15 Minutes</h3><p>Click the following link to verify your email: <a href='" + url + `'>${url}</a></p></body></html>`
+            },
+            },
+            "Subject": {
+            "Charset": "UTF-8",
+            "Data": "GeekCodex Verify Email"
+            }
+        },
+        "Source": "no-reply@geekcodex.org",
+    };
+
+    const command = new SendEmailCommand(input);
+    console.log("Sending email to " + to);
+    return await client.send(command);
+}
+
 export const verifyPostUser = async (client:any, userid: number, postid: number) => {
 
     const query = `
