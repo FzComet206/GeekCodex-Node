@@ -3,6 +3,11 @@ import argon2 from "argon2";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import rateLimit from "express-rate-limit";
 
+export const emailLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 4, // limit each IP to 6 requests per windowMs
+});
+
 export const deleteLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minutes
     max: 60, // limit each IP to 6 requests per windowMs

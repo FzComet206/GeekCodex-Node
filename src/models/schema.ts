@@ -8,7 +8,6 @@ export const users = pgTable("users", {
     password: text('password'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     isop: integer('is_op').notNull().default(0),
-    numberofPosts: integer('number_of_posts').notNull().default(0),
 });
 
 export const posts = pgTable("posts", {

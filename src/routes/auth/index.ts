@@ -3,7 +3,7 @@ import { Router } from "express";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { db } from "../../index";
-import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES, authLimiter, feedLimiter, sendVerifySES } from "../../utils/helper";
+import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES, authLimiter, feedLimiter, sendVerifySES, emailLimiter } from "../../utils/helper";
 import { v4 as uuidv4 } from 'uuid';
 import { redisClient } from "../../middlewares/createApp";
 
@@ -19,6 +19,7 @@ router.post('/resetpassword', authLimiter, async (req, res) => {
             const hashed = await hashPassword(password);
             db.update(users).set({ password: hashed }).where(eq(users.email, email)).execute();
             await redisClient.del(`reset:${token}`);
+            await redisClient.del(`reset:${email}`);
             res.status(200).json({
                 message: "Password reset"
             })
@@ -35,13 +36,23 @@ router.post('/resetpassword', authLimiter, async (req, res) => {
     }
 })
 
-router.post('/changepassword', authLimiter, async (req, res) => {
+router.post('/changepassword', emailLimiter, async (req, res) => {
     const email = req.body.email;
+
     const user = await db.select().from(users).where(eq(users.email, email)).execute();
     if (user.length == 0) {
         res.status(404).json({ message: "User not found" });
         return;
     }
+
+    if (await redisClient.get(`reset:${email}`)){
+        console.log("password reset already sent")
+        res.status(429).json({
+            message: "Password reset already sent"
+        })
+        return;
+    }
+
     // passsword check
     try {
 
@@ -50,6 +61,8 @@ router.post('/changepassword', authLimiter, async (req, res) => {
         const url = process.env.ORIGIN + `/auth/resetpassword/${token}`
         // store token in redis
         redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
+        redisClient.set(`reset:${email}`, token, 'EX', 60 * 15)
+
         // send email with token
         await sendResetSES(email, url)
         res.status(200).json({
@@ -149,21 +162,29 @@ router.post('/logout', authLimiter, async (req, res) => {
 })
 
 
-router.post('/register', authLimiter, async (req, res) => {
+router.post('/register', emailLimiter, async (req, res) => {
 
     const name = req.body.name;
     const email = req.body.email;
     const password = req.body.password;
+
     const serverCheck = (
         (name.length < 3 || name.length > 12) ||
         (email.length < 4 || email.length > 50 || email.indexOf('@') === -1 || email.indexOf('.') === -1)  ||
         (password.length < 8 || password.length > 20)
     );
 
-
     if (serverCheck) {
         res.status(400).json({
             message: "Invalid input"
+        })
+        return;
+    }
+
+    if (await redisClient.get(`verify:${email}`)){
+        console.log("verify already sent")
+        res.status(429).json({
+            message: "Verify already sent"
         })
         return;
     }
@@ -184,6 +205,7 @@ router.post('/register', authLimiter, async (req, res) => {
         await redisClient.set(`verify_username:${token}`, req.body.name, 'EX', 60 * 15);
         await redisClient.set(`verify_email:${token}`, req.body.email, 'EX', 60 * 15);
         await redisClient.set(`verify_hash:${token}`, hashed, 'EX', 60 * 15);
+        await redisClient.set(`verify:${email}`, token, 'EX', 60 * 15);
 
         console.log("server register")
 
@@ -200,7 +222,7 @@ router.post('/register', authLimiter, async (req, res) => {
     }
 })
 
-router.post('/verify', async (req, res) => {
+router.post('/verify', authLimiter, async (req, res) => {
     const token = req.body.token;
     const username = await redisClient.get(`verify_username:${token}`);
     const email = await redisClient.get(`verify_email:${token}`);
@@ -218,12 +240,21 @@ router.post('/verify', async (req, res) => {
         await redisClient.del(`verify_username:${token}`);
         await redisClient.del(`verify_email:${token}`);
         await redisClient.del(`verify_hash:${token}`);
+        await redisClient.del(`verify:${email}`);
+
 
         db.insert(users).values({
             username: username,
             email: email,
             password: password
         }).execute();
+
+        const user = await db.select().from(users).where(eq(users.email, email)).execute();
+        req.session.userId = user[0].id;
+        res.status(200).json({
+            username: user[0].username
+        })
+                
     } catch {
         res.status(500).json({
             message: "Internal server error"
