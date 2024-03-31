@@ -3,7 +3,7 @@ import { Router } from "express";
 import { users } from "../../models/schema";
 import { eq } from "drizzle-orm";
 import { db } from "../../index";
-import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES, authLimiter, feedLimiter, sendVerifySES, emailLimiter } from "../../utils/helper";
+import { hashPassword, verifyPassword, ensureAuthenticated, sendResetSES, authLimiter, feedLimiter, sendVerifySES, emailLimiter, loginLimiter } from "../../utils/helper";
 import { v4 as uuidv4 } from 'uuid';
 import { redisClient } from "../../middlewares/createApp";
 
@@ -99,7 +99,7 @@ router.get('/me', feedLimiter, ensureAuthenticated, async (req, res) => {
 
 })
 
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
 
     const email = req.body.email;
 

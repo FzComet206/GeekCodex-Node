@@ -15,7 +15,11 @@ import {
         FETCH_FOLLOWER_INFO, 
         FETCH_FOLLOWING_INFO, 
         FETCH_LIKE_INFO,
-        FETCH_POSTS_SORT_LIKE} from "../utils/queries";
+        FETCH_POSTS_SORT_LIKE,
+        FETCH_SELF_POSTS_SEARCH,
+        FETCH_SELF_POSTS_SORT_LIKE,
+        FETCH_LIKED_POSTS_SEARCH,
+        FETCH_LIKED_POSTS_SORT_LIKE} from "../utils/queries";
 import { actionLimiter, deleteLimiter, ensureAuthenticated, feedLimiter, postLimiter, verifyPostUser } from "../utils/helper";
 
 const router = Router();
@@ -26,9 +30,20 @@ router.get('/user', feedLimiter, ensureAuthenticated, async (req, res) => {
     const id = parseInt(req.query.userid as string);
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
+    const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
+    const sort = (req.query.sort as string) || "";
 
     try {
-        const results = await client.query(FETCH_SELF_POSTS, [limit, offset, id]);
+        let results;
+        if (search){
+            results = await client.query(FETCH_SELF_POSTS_SEARCH, [limit, offset, search, id]);
+        } else {
+            if (sort == "like"){
+                results = await client.query(FETCH_SELF_POSTS_SORT_LIKE, [limit, offset, id]);
+            } else {
+                results = await client.query(FETCH_SELF_POSTS, [limit, offset, id]);
+            }
+        }
 
         let posts: PostData[] = new Array();
         results.rows.forEach(async element => {
@@ -300,10 +315,21 @@ router.get('/likedposts', feedLimiter, ensureAuthenticated, async (req, res) => 
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const offset = (page - 1) * limit;
+    const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
+    const sort = (req.query.sort as string) || "";
 
     const userid = req.session.userId;
     try {
-        const results = await client.query(FETCH_LIKED_POSTS, [userid, limit, offset]);
+        let results;
+        if (search){
+            results = await client.query(FETCH_LIKED_POSTS_SEARCH, [userid, limit, offset, search]);
+        } else {
+            if (sort == "like"){
+                results = await client.query(FETCH_LIKED_POSTS_SORT_LIKE, [userid, limit, offset]);
+            } else {
+                results = await client.query(FETCH_LIKED_POSTS, [userid, limit, offset]);
+            }
+        }
 
         let posts: PostData[] = new Array();
         results.rows.forEach(async element => {
@@ -350,11 +376,22 @@ router.get('/likedposts', feedLimiter, ensureAuthenticated, async (req, res) => 
 router.get('/self', feedLimiter, ensureAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
+    const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
+    const sort = (req.query.sort as string) || "";
     const offset = (page - 1) * limit;
 
     const userid = req.session.userId;
     try {
-        const results = await client.query(FETCH_SELF_POSTS, [limit, offset, userid!]);
+        let results;
+        if (search){
+            results = await client.query(FETCH_SELF_POSTS_SEARCH, [limit, offset, search, userid]);
+        } else {
+            if (sort == "like"){
+                results = await client.query(FETCH_SELF_POSTS_SORT_LIKE, [limit, offset, userid]);
+            } else {
+                results = await client.query(FETCH_SELF_POSTS, [limit, offset, userid]);
+            }
+        }
 
         let posts: PostData[] = new Array();
         results.rows.forEach(async element => {

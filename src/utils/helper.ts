@@ -18,6 +18,11 @@ export const postLimiter = rateLimit({
     max: 6, // limit each IP to 6 requests per windowMs
 });
 
+export const loginLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minutes
+    max: 12, // limit each IP to 6 requests per windowMs
+});
+
 // used for all auth operations
 export const authLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minutes

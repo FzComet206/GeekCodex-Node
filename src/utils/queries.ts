@@ -1,19 +1,10 @@
-export const FETCH_SELF_POSTS = `
+// all posts
+
+export const FETCH_POSTS = `
         SELECT posts.* , users.username AS author 
         FROM posts
         JOIN users ON posts.userid = users.id
-        WHERE posts.userid = $3
         ORDER BY posts.created_at DESC
-        LIMIT $1 OFFSET $2;
-    `;
-
-
-export const FETCH_POSTS_SEARCH = `
-        SELECT posts.* , users.username AS author 
-        FROM posts
-        JOIN users ON posts.userid = users.id
-        WHERE search_vector @@ to_tsquery('english', $3)
-        ORDER BY ts_rank_cd(search_vector, to_tsquery('english', $3)) DESC
         LIMIT $1 OFFSET $2;
     `;
 
@@ -25,13 +16,46 @@ export const FETCH_POSTS_SORT_LIKE = `
         LIMIT $1 OFFSET $2;
     `;
 
-export const FETCH_POSTS = `
+export const FETCH_POSTS_SEARCH = `
         SELECT posts.* , users.username AS author 
         FROM posts
         JOIN users ON posts.userid = users.id
+        WHERE search_vector @@ to_tsquery('english', $3)
+        ORDER BY ts_rank_cd(search_vector, to_tsquery('english', $3)) DESC
+        LIMIT $1 OFFSET $2;
+    `;
+
+
+// self posts
+
+export const FETCH_SELF_POSTS = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        WHERE posts.userid = $3
         ORDER BY posts.created_at DESC
         LIMIT $1 OFFSET $2;
     `;
+
+export const FETCH_SELF_POSTS_SORT_LIKE = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        WHERE posts.userid = $3
+        ORDER BY posts.number_of_Likes DESC, posts.created_at DESC
+        LIMIT $1 OFFSET $2;
+    `;
+
+export const FETCH_SELF_POSTS_SEARCH = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        WHERE posts.userid = $4 AND search_vector @@ to_tsquery('english', $3)
+        ORDER BY ts_rank_cd(search_vector, to_tsquery('english', $3)) DESC
+        LIMIT $1 OFFSET $2;
+    `;
+
+// liked posts
 
 export const FETCH_LIKED_POSTS = `
         SELECT posts.* , users.username AS author 
@@ -42,6 +66,28 @@ export const FETCH_LIKED_POSTS = `
         ORDER BY posts.created_at DESC
         LIMIT $2 OFFSET $3;
     `;
+
+export const FETCH_LIKED_POSTS_SORT_LIKE = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        JOIN likes ON posts.id = likes.postid
+        WHERE likes.userid = $1
+        ORDER BY posts.number_of_Likes DESC, posts.created_at DESC
+        LIMIT $2 OFFSET $3;
+    `;
+
+export const FETCH_LIKED_POSTS_SEARCH = `
+        SELECT posts.* , users.username AS author 
+        FROM posts
+        JOIN users ON posts.userid = users.id
+        JOIN likes ON posts.id = likes.postid
+        WHERE likes.userid = $1 AND search_vector @@ to_tsquery('english', $4)
+        ORDER BY ts_rank_cd(search_vector, to_tsquery('english', $4)) DESC
+        LIMIT $2 OFFSET $3;
+    `;
+
+// others
 
 export const DELETE_USER_FOLLOWS = `
         DELETE FROM user_follows
