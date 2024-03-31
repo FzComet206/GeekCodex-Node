@@ -410,7 +410,7 @@ router.get('/feed', feedLimiter, async (req, res) => {
         if (search){
             results = await client.query(FETCH_POSTS_SEARCH, [limit, offset, search]);
         } else {
-            if (sort){
+            if (sort == "like"){
                 results = await client.query(FETCH_POSTS_SORT_LIKE, [limit, offset]);
             } else {
                 results = await client.query(FETCH_POSTS, [limit, offset]);
