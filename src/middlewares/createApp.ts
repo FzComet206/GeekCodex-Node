@@ -7,9 +7,10 @@ config();
 import session from 'express-session';
 import connectRedis from 'connect-redis';
 import Redis from 'ioredis';
+import { feedLimiter } from '../utils/helper';
 
 const corsOptions = {
-    origin: process.env.ORIGIN,
+    origin: process.env.PROD? process.env.ORIGIN : process.env.ORIGIN_DEV,
     credentials: true
 }
 
@@ -22,12 +23,11 @@ declare module "express-session" {
 const RedisStore = connectRedis(session);
 const redis = new Redis(
     {
-    
-        host: process.env.REDISHOST,
+        host: process.env.PROD? process.env.REDISHOST : process.env.REDISHOST_DEV,
         port: parseInt(process.env.REDISPORT || '6379'),
     }
 );
-console.log("redis connected")
+
 export const redisClient = redis;
 
 export function creatApp(){
@@ -52,8 +52,10 @@ export function creatApp(){
         );
     
 
+
     // use routes
     app.use('/api', routes);
+
     
     return app;
 }

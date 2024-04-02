@@ -435,6 +435,10 @@ router.get('/self', feedLimiter, ensureAuthenticated, async (req, res) => {
 })
 
 router.get('/feed', feedLimiter, async (req, res) => {
+
+    console.log("feed api")
+
+
     const limit = parseInt(req.query.limit as string) || 4;
     const page = parseInt(req.query.page as string) || 1;
     const search = (req.query.search as string).split(/\s+/).join(' | ') || "";
@@ -453,6 +457,8 @@ router.get('/feed', feedLimiter, async (req, res) => {
                 results = await client.query(FETCH_POSTS, [limit, offset]);
             }
         }
+
+        console.log("feed results")
 
         let posts: PostData[] = new Array();
         results.rows.forEach(async element => {
@@ -506,7 +512,7 @@ router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
 
     try {
         // a account can only have 20 posts maximum for now
-        if ((await client.query(check_Postcount_query, [req.session.userId])).rows.length > 20) {
+        if ((await client.query(check_Postcount_query, [req.session.userId])).rows.length >= 20) {
             console.log("Post limit reached")
             res.status(400).json({
                 message: "Post limit reached"
@@ -560,5 +566,6 @@ router.post('/post', postLimiter, ensureAuthenticated, async (req, res) => {
 })
 
 router.use('/auth', authRouter);
+
 
 export default router;

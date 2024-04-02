@@ -1,6 +1,6 @@
 FROM node
 
-WORKDIR /usr/app
+WORKDIR /app
 
 COPY package*.json ./
 
@@ -13,7 +13,11 @@ RUN npm run build
 COPY .env ./dist
 
 WORKDIR ./dist
-EXPOSE 3001
+
+
+ENV PROD=true
+
+EXPOSE 3002
 CMD ["node", "index.js"]
 
 

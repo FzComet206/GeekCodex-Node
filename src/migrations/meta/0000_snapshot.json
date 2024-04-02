@@ -1,77 +1,9 @@
 {
-  "id": "644f6287-213d-4467-a8bc-0417d20444de",
+  "id": "d1c12ace-e37f-4f78-a828-22a7cba3cee6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
   "tables": {
-    "comments": {
-      "name": "comments",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "userid": {
-          "name": "userid",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "postid": {
-          "name": "postid",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "comments_userid_users_id_fk": {
-          "name": "comments_userid_users_id_fk",
-          "tableFrom": "comments",
-          "tableTo": "users",
-          "columnsFrom": [
-            "userid"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "comments_postid_posts_id_fk": {
-          "name": "comments_postid_posts_id_fk",
-          "tableFrom": "comments",
-          "tableTo": "posts",
-          "columnsFrom": [
-            "postid"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
     "likes": {
       "name": "likes",
       "schema": "",
@@ -298,12 +230,19 @@
           "notNull": true,
           "default": "now()"
         },
-        "follower_count": {
-          "name": "follower_count",
+        "is_op": {
+          "name": "is_op",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "max_post": {
+          "name": "max_post",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 20
         }
       },
       "indexes": {},

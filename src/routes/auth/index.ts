@@ -58,7 +58,7 @@ router.post('/changepassword', emailLimiter, async (req, res) => {
 
         // generate uuid token
         const token = uuidv4();
-        const url = process.env.ORIGIN + `/auth/resetpassword/${token}`
+        const url = (process.env.PROD? process.env.ORIGIN_EMAIL: process.env.ORIGIN) + `/auth/resetpassword/${token}`
         // store token in redis
         redisClient.set(`reset:${token}`, email, 'EX', 60 * 15)
         redisClient.set(`reset:${email}`, token, 'EX', 60 * 15)
@@ -120,12 +120,14 @@ router.post('/login', loginLimiter, async (req, res) => {
                     message: "Invalid password"
                 })
             }
-        } catch {
+        } catch (e) {
+            console.log(e)
             res.status(500).json({
                 message: "Internal server error"
             })
         }
-    } catch {
+    } catch (e) {
+        console.log(e)
         res.status(500).json({
             message: "Internal server error"
         })
@@ -209,7 +211,7 @@ router.post('/register', emailLimiter, async (req, res) => {
 
         console.log("server register")
 
-        const url = process.env.ORIGIN + `/auth/verify/${token}`
+        const url = (process.env.PROD? process.env.ORIGIN_EMAIL: process.env.ORIGIN) + `/auth/verify/${token}`
         await sendVerifySES(email, url)
         res.status(200).json({
             message: "Password change request"
