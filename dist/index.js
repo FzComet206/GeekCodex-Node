@@ -21,14 +21,12 @@ const node_postgres_1 = require("drizzle-orm/node-postgres");
 const drizzle_1 = __importDefault(require("./config/drizzle"));
 drizzle_1.default.connect();
 exports.db = (0, node_postgres_1.drizzle)(drizzle_1.default);
-console.log("db connected successfully");
 const PORT = process.env.PORT;
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const app = (0, createApp_1.creatApp)();
-            app.listen(PORT, () => console.log(`running on port ${PORT}`));
-            console.log(`Running in ${process.env.PORT}`);
+            app.listen(PORT, () => console.log(`Running on port ${PORT}`));
         }
         catch (err) {
             console.log(err);

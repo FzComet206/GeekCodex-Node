@@ -13,24 +13,18 @@ const express_session_1 = __importDefault(require("express-session"));
 const connect_redis_1 = __importDefault(require("connect-redis"));
 const ioredis_1 = __importDefault(require("ioredis"));
 const corsOptions = {
-    origin: process.env.ORIGIN,
+    origin: process.env.PROD ? process.env.ORIGIN : process.env.ORIGIN_DEV,
     credentials: true
 };
 const RedisStore = (0, connect_redis_1.default)(express_session_1.default);
-const redis = new ioredis_1.default();
+const redis = new ioredis_1.default({
+    host: process.env.PROD ? process.env.REDISHOST : process.env.REDISHOST_DEV,
+    port: parseInt(process.env.REDISPORT || '6379'),
+});
 exports.redisClient = redis;
 function creatApp() {
     const app = (0, express_1.default)();
-    // app.use(bodyParser.json());
-    // connect to redis server
-    // const redisClient = createClient();
-    // const redisStore = new RedisStore({ client: redis});
-    // redisClient.connect().catch(err => {
-    // console.log("redis connect error")
-    // console.log(err)});
-    // use cors middleware
     app.use((0, cors_1.default)(corsOptions));
-    // use express session middleware and store session in redis
     app.use(express_1.default.json());
     app.use((0, express_session_1.default)({
         name: "Codex",

@@ -10,7 +10,6 @@ exports.users = (0, pg_core_1.pgTable)("users", {
     password: (0, pg_core_1.text)('password'),
     createdAt: (0, pg_core_1.timestamp)('created_at', { withTimezone: true }).notNull().defaultNow(),
     isop: (0, pg_core_1.integer)('is_op').notNull().default(0),
-    numberofPosts: (0, pg_core_1.integer)('number_of_posts').notNull().default(0),
 });
 exports.posts = (0, pg_core_1.pgTable)("posts", {
     id: (0, pg_core_1.serial)('id').primaryKey(),

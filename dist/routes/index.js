@@ -27,8 +27,21 @@ router.get('/user', helper_1.feedLimiter, helper_1.ensureAuthenticated, (req, re
     const id = parseInt(req.query.userid);
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
+    const search = req.query.search.split(/\s+/).join(' | ') || "";
+    const sort = req.query.sort || "";
     try {
-        const results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS, [limit, offset, id]);
+        let results;
+        if (search) {
+            results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS_SEARCH, [limit, offset, search, id]);
+        }
+        else {
+            if (sort == "like") {
+                results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS_SORT_LIKE, [limit, offset, id]);
+            }
+            else {
+                results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS, [limit, offset, id]);
+            }
+        }
         let posts = new Array();
         results.rows.forEach((element) => __awaiter(void 0, void 0, void 0, function* () {
             const isLiked = `
@@ -106,173 +119,202 @@ router.get('/dashboard', helper_1.feedLimiter, helper_1.ensureAuthenticated, (re
 router.get('/follow', helper_1.actionLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authorid = parseInt(req.query.authorid);
     const userid = req.session.userId;
-    if (authorid && userid) {
-        const isFollowedQuery = `
-            SELECT * FROM user_follows
-            WHERE followerid = $1 AND followingid = $2;
-        `;
-        if ((yield drizzle_1.default.query(isFollowedQuery, [userid, authorid])).rows.length > 0) {
-            // unfollow
-            try {
-                yield drizzle_1.default.query(queries_1.DELETE_USER_FOLLOWS, [userid, authorid]);
-            }
-            catch (err) {
-                console.error(err);
-                res.status(500).json({
-                    message: "Internal server error"
-                });
-            }
-            res.status(200).json({
-                message: "Unfollowed"
-            });
-            return;
-        }
-        else {
-            // follow
-            const insertFollow = `
-                INSERT INTO user_follows (followerid, followingid)
-                VALUES ($1, $2);
+    try {
+        if (authorid && userid) {
+            const isFollowedQuery = `
+                SELECT * FROM user_follows
+                WHERE followerid = $1 AND followingid = $2;
             `;
-            try {
-                yield drizzle_1.default.query(queries_1.SET_USER_FOLLOWS, [userid, authorid]);
-            }
-            catch (err) {
-                console.error(err);
-                res.status(500).json({
-                    message: "Internal server error"
+            if ((yield drizzle_1.default.query(isFollowedQuery, [userid, authorid])).rows.length > 0) {
+                // unfollow
+                try {
+                    yield drizzle_1.default.query(queries_1.DELETE_USER_FOLLOWS, [userid, authorid]);
+                }
+                catch (err) {
+                    console.error(err);
+                    res.status(500).json({
+                        message: "Internal server error"
+                    });
+                }
+                res.status(200).json({
+                    message: "Unfollowed"
                 });
+                return;
             }
-            res.status(200).json({
-                message: "Followed"
-            });
-            return;
+            else {
+                // follow
+                const insertFollow = `
+                    INSERT INTO user_follows (followerid, followingid)
+                    VALUES ($1, $2);
+                `;
+                try {
+                    yield drizzle_1.default.query(queries_1.SET_USER_FOLLOWS, [userid, authorid]);
+                }
+                catch (err) {
+                    console.error(err);
+                    res.status(500).json({
+                        message: "Internal server error"
+                    });
+                }
+                res.status(200).json({
+                    message: "Followed"
+                });
+                return;
+            }
         }
+        res.status(400).json({
+            message: "Invalid input"
+        });
     }
-    res.status(400).json({
-        message: "Invalid input"
-    });
+    catch (_j) {
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
 }));
 router.get('/like', helper_1.actionLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const postid = parseInt(req.query.postid);
     const userid = req.session.userId;
-    if (postid && userid) {
-        const isLikedQuery = `
-            SELECT * FROM likes
-            WHERE userid = $1 AND postid = $2;
-        `;
-        if ((yield drizzle_1.default.query(isLikedQuery, [userid, postid])).rows.length > 0) {
-            // dislike
-            const deleteLike = `
-                DELETE FROM likes
+    try {
+        if (postid && userid) {
+            const isLikedQuery = `
+                SELECT * FROM likes
                 WHERE userid = $1 AND postid = $2;
             `;
-            const updatePostLike = `
-                UPDATE posts
-                SET number_of_likes = number_of_likes - 1
-                WHERE id = $1;
-            `;
-            const getNumberOfLikes = `
-                SELECT number_of_likes FROM posts WHERE id = $1;
-            `;
-            yield drizzle_1.default.query(deleteLike, [userid, postid]);
-            yield drizzle_1.default.query(updatePostLike, [postid]);
-            const likes = yield drizzle_1.default.query(getNumberOfLikes, [postid]);
-            console.log("Post disliked");
-            res.status(200).json({
-                message: "Post disliked",
-                likes: likes.rows[0].number_of_likes,
-                liked: false
-            });
-            return;
+            if ((yield drizzle_1.default.query(isLikedQuery, [userid, postid])).rows.length > 0) {
+                // dislike
+                const deleteLike = `
+                    DELETE FROM likes
+                    WHERE userid = $1 AND postid = $2;
+                `;
+                const updatePostLike = `
+                    UPDATE posts
+                    SET number_of_likes = number_of_likes - 1
+                    WHERE id = $1;
+                `;
+                const getNumberOfLikes = `
+                    SELECT number_of_likes FROM posts WHERE id = $1;
+                `;
+                yield drizzle_1.default.query(deleteLike, [userid, postid]);
+                yield drizzle_1.default.query(updatePostLike, [postid]);
+                const likes = yield drizzle_1.default.query(getNumberOfLikes, [postid]);
+                console.log("Post disliked");
+                res.status(200).json({
+                    message: "Post disliked",
+                    likes: likes.rows[0].number_of_likes,
+                    liked: false
+                });
+                return;
+            }
+            else {
+                // like
+                const insertLike = `
+                    INSERT INTO likes (userid, postid)
+                    VALUES ($1, $2);
+                `;
+                const updatePostLike = `
+                    UPDATE posts
+                    SET number_of_likes = number_of_likes + 1
+                    WHERE id = $1;
+                `;
+                const getNumberOfLikes = `
+                    SELECT number_of_likes FROM posts WHERE id = $1;
+                `;
+                yield drizzle_1.default.query(insertLike, [userid, postid]);
+                yield drizzle_1.default.query(updatePostLike, [postid]);
+                const likes = yield drizzle_1.default.query(getNumberOfLikes, [postid]);
+                console.log("Post liked");
+                res.status(200).json({
+                    message: "Post liked",
+                    likes: likes.rows[0].number_of_likes,
+                    liked: true
+                });
+                return;
+            }
         }
-        else {
-            // like
-            const insertLike = `
-                INSERT INTO likes (userid, postid)
-                VALUES ($1, $2);
-            `;
-            const updatePostLike = `
-                UPDATE posts
-                SET number_of_likes = number_of_likes + 1
-                WHERE id = $1;
-            `;
-            const getNumberOfLikes = `
-                SELECT number_of_likes FROM posts WHERE id = $1;
-            `;
-            yield drizzle_1.default.query(insertLike, [userid, postid]);
-            yield drizzle_1.default.query(updatePostLike, [postid]);
-            const likes = yield drizzle_1.default.query(getNumberOfLikes, [postid]);
-            console.log("Post liked");
-            res.status(200).json({
-                message: "Post liked",
-                likes: likes.rows[0].number_of_likes,
-                liked: true
-            });
-            return;
-        }
+        res.status(400).json({
+            message: "Invalid input"
+        });
     }
-    res.status(400).json({
-        message: "Invalid input"
-    });
+    catch (_k) {
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
 }));
 router.get('/delete', helper_1.deleteLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("server delete");
     const id = parseInt(req.query.id);
     const userid = req.session.userId;
-    if (id && userid) {
-        console.log("id and userid");
-        const user = yield drizzle_1.default.query(`SELECT * FROM users WHERE id = $1`, [userid]);
-        if (user.rows[0].is_op == 1) {
-            const ref = yield drizzle_1.default.query(`SELECT * FROM posts WHERE id = $1`, [id]);
-            const deleteLikes = `
-                DELETE FROM likes
-                WHERE postid = $1;
-            `;
-            yield drizzle_1.default.query(deleteLikes, [id]);
-            const query = `
-                DELETE FROM posts
-                WHERE id = $1;
-            `;
-            yield drizzle_1.default.query(query, [id]);
-            console.log("op delete");
-            res.status(200).json({
-                message: "Post deleted by op",
-                image: ref.rows[0].image
-            });
-            return;
+    try {
+        if (id && userid) {
+            const user = yield drizzle_1.default.query(`SELECT * FROM users WHERE id = $1`, [userid]);
+            if (user.rows[0].is_op == 1) {
+                const ref = yield drizzle_1.default.query(`SELECT * FROM posts WHERE id = $1`, [id]);
+                const deleteLikes = `
+                    DELETE FROM likes
+                    WHERE postid = $1;
+                `;
+                yield drizzle_1.default.query(deleteLikes, [id]);
+                const query = `
+                    DELETE FROM posts
+                    WHERE id = $1;
+                `;
+                yield drizzle_1.default.query(query, [id]);
+                res.status(200).json({
+                    message: "Post deleted by op",
+                    image: ref.rows[0].image
+                });
+                return;
+            }
+            const data = yield (0, helper_1.verifyPostUser)(drizzle_1.default, userid, id);
+            if (data.rows.length > 0) {
+                const deleteLikes = `
+                    DELETE FROM likes
+                    WHERE postid = $1;
+                `;
+                yield drizzle_1.default.query(deleteLikes, [id]);
+                const query = `
+                    DELETE FROM posts
+                    WHERE id = $1;
+                `;
+                yield drizzle_1.default.query(query, [id]);
+                res.status(200).json({
+                    message: "Post deleted",
+                    image: data.rows[0].image
+                });
+                return;
+            }
         }
-        const data = yield (0, helper_1.verifyPostUser)(drizzle_1.default, userid, id);
-        console.log("verify");
-        if (data.rows.length > 0) {
-            const deleteLikes = `
-                DELETE FROM likes
-                WHERE postid = $1;
-            `;
-            yield drizzle_1.default.query(deleteLikes, [id]);
-            const query = `
-                DELETE FROM posts
-                WHERE id = $1;
-            `;
-            yield drizzle_1.default.query(query, [id]);
-            console.log("normal delete");
-            res.status(200).json({
-                message: "Post deleted",
-                image: data.rows[0].image
-            });
-            return;
-        }
+        res.status(400).json({
+            message: "Invalid input"
+        });
     }
-    res.status(400).json({
-        message: "Invalid input"
-    });
+    catch (_l) {
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
 }));
 router.get('/likedposts', helper_1.feedLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const limit = parseInt(req.query.limit) || 4;
     const page = parseInt(req.query.page) || 1;
     const offset = (page - 1) * limit;
+    const search = req.query.search.split(/\s+/).join(' | ') || "";
+    const sort = req.query.sort || "";
     const userid = req.session.userId;
     try {
-        const results = yield drizzle_1.default.query(queries_1.FETCH_LIKED_POSTS, [userid, limit, offset]);
+        let results;
+        if (search) {
+            results = yield drizzle_1.default.query(queries_1.FETCH_LIKED_POSTS_SEARCH, [userid, limit, offset, search]);
+        }
+        else {
+            if (sort == "like") {
+                results = yield drizzle_1.default.query(queries_1.FETCH_LIKED_POSTS_SORT_LIKE, [userid, limit, offset]);
+            }
+            else {
+                results = yield drizzle_1.default.query(queries_1.FETCH_LIKED_POSTS, [userid, limit, offset]);
+            }
+        }
         let posts = new Array();
         results.rows.forEach((element) => __awaiter(void 0, void 0, void 0, function* () {
             const isLiked = `
@@ -315,10 +357,23 @@ router.get('/likedposts', helper_1.feedLimiter, helper_1.ensureAuthenticated, (r
 router.get('/self', helper_1.feedLimiter, helper_1.ensureAuthenticated, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const limit = parseInt(req.query.limit) || 4;
     const page = parseInt(req.query.page) || 1;
+    const search = req.query.search.split(/\s+/).join(' | ') || "";
+    const sort = req.query.sort || "";
     const offset = (page - 1) * limit;
     const userid = req.session.userId;
     try {
-        const results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS, [limit, offset, userid]);
+        let results;
+        if (search) {
+            results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS_SEARCH, [limit, offset, search, userid]);
+        }
+        else {
+            if (sort == "like") {
+                results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS_SORT_LIKE, [limit, offset, userid]);
+            }
+            else {
+                results = yield drizzle_1.default.query(queries_1.FETCH_SELF_POSTS, [limit, offset, userid]);
+            }
+        }
         let posts = new Array();
         results.rows.forEach((element) => __awaiter(void 0, void 0, void 0, function* () {
             const isLiked = `
@@ -359,6 +414,7 @@ router.get('/self', helper_1.feedLimiter, helper_1.ensureAuthenticated, (req, re
     }
 }));
 router.get('/feed', helper_1.feedLimiter, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("feed api");
     const limit = parseInt(req.query.limit) || 4;
     const page = parseInt(req.query.page) || 1;
     const search = req.query.search.split(/\s+/).join(' | ') || "";
@@ -371,13 +427,14 @@ router.get('/feed', helper_1.feedLimiter, (req, res) => __awaiter(void 0, void 0
             results = yield drizzle_1.default.query(queries_1.FETCH_POSTS_SEARCH, [limit, offset, search]);
         }
         else {
-            if (sort) {
+            if (sort == "like") {
                 results = yield drizzle_1.default.query(queries_1.FETCH_POSTS_SORT_LIKE, [limit, offset]);
             }
             else {
                 results = yield drizzle_1.default.query(queries_1.FETCH_POSTS, [limit, offset]);
             }
         }
+        console.log("feed results");
         let posts = new Array();
         results.rows.forEach((element) => __awaiter(void 0, void 0, void 0, function* () {
             const isLiked = `
@@ -423,46 +480,53 @@ router.post('/post', helper_1.postLimiter, helper_1.ensureAuthenticated, (req, r
         SELECT * FROM posts
         WHERE userid = $1;
     `;
-    // a account can only have 20 posts maximum for now
-    if ((yield drizzle_1.default.query(check_Postcount_query, [req.session.userId])).rows.length > 20) {
-        console.log("Post limit reached");
-        res.status(400).json({
-            message: "Post limit reached"
+    try {
+        // a account can only have 20 posts maximum for now
+        if ((yield drizzle_1.default.query(check_Postcount_query, [req.session.userId])).rows.length >= 20) {
+            console.log("Post limit reached");
+            res.status(400).json({
+                message: "Post limit reached"
+            });
+            return;
+        }
+        const { title, summary, link, type } = req.body;
+        const serverCheck = ((title.length < 1 || title.length > 80) ||
+            (summary.length < 1 || summary.length > 5000) ||
+            (link.length > 200));
+        if (serverCheck) {
+            res.status(400).json({
+                message: "Invalid input"
+            });
+            return;
+        }
+        const userId = req.session.userId;
+        const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+        const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
+        // insertion operation
+        if (req.session.userId) {
+            yield index_1.db.insert(schema_1.posts).values({
+                userid: userId,
+                title: title,
+                body: summary,
+                link: link,
+                image: image_postgres
+            }).execute();
+        }
+        else {
+            res.status(500).json({
+                message: "session userid not found"
+            });
+        }
+        res.status(200).json({
+            message: "Post successful",
+            url: image_s3
         });
-        return;
     }
-    const { title, summary, link, type } = req.body;
-    const serverCheck = ((title.length < 1 || title.length > 80) ||
-        (summary.length < 1 || summary.length > 5000) ||
-        (link.length > 200));
-    if (serverCheck) {
-        res.status(400).json({
-            message: "Invalid input"
-        });
-        return;
-    }
-    const userId = req.session.userId;
-    const image_postgres = "https://rsdev.s3.amazonaws.com/" + userId.toString() + "_" + new Date().getTime().toString() + "." + type;
-    const image_s3 = userId.toString() + "_" + new Date().getTime().toString() + "." + type;
-    // insertion operation
-    if (req.session.userId) {
-        yield index_1.db.insert(schema_1.posts).values({
-            userid: userId,
-            title: title,
-            body: summary,
-            link: link,
-            image: image_postgres
-        }).execute();
-    }
-    else {
+    catch (_m) {
         res.status(500).json({
-            message: "session userid not found"
+            message: "Internal server error"
         });
     }
-    res.status(200).json({
-        message: "Post successful",
-        url: image_s3
-    });
 }));
 router.use('/auth', auth_1.default);
 exports.default = router;
